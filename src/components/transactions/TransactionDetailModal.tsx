@@ -5,6 +5,7 @@ import { RuleForm } from '@/components/categories/RuleForm.tsx'
 import { useRepositories } from '@/repositories/RepositoryContext.tsx'
 import { formatDate } from '@/utils/dateUtils.ts'
 import { formatCurrency } from '@/utils/currencyUtils.ts'
+import { categorizeTransaction } from '@/services/categorizationEngine.ts'
 import type { Transaction, Category, Rule } from '@/types/models.ts'
 import toast from 'react-hot-toast'
 
@@ -70,6 +71,10 @@ export function TransactionDetailModal({ transaction, onClose, categories }: Tra
     isEnabled: true,
   } as unknown as Rule : undefined
 
+  // Only allow assigning to leaf categories (those with no children)
+  const parentIds = new Set(categories.filter((c) => c.parentId !== null).map((c) => c.parentId))
+  const leafCategories = categories.filter((c) => !parentIds.has(c.id!))
+
   const selectClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100'
 
   return (
@@ -114,14 +119,35 @@ export function TransactionDetailModal({ transaction, onClose, categories }: Tra
               onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : undefined)}
             >
               <option value="">Uncategorized</option>
-              {categories.map((c) => (
+              {leafCategories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.parentId !== null ? '  ' : ''}{c.name}
                 </option>
               ))}
             </select>
             {transaction.isManualCategory && (
-              <p className="mt-1 text-xs text-blue-500">Manually categorized (won't be overwritten by rules)</p>
+              <p className="mt-1 flex items-center gap-2 text-xs text-blue-500">
+                Manually categorized (won't be overwritten by rules)
+                <button
+                  type="button"
+                  className="underline hover:text-blue-700 dark:hover:text-blue-300"
+                  onClick={async () => {
+                    const rules = await repos.rules.getEnabled()
+                    const autoCategoryId = categorizeTransaction(
+                      { ...transaction, isManualCategory: false, categoryId: undefined },
+                      rules
+                    )
+                    await repos.transactions.update(transaction.id!, {
+                      isManualCategory: false,
+                      categoryId: autoCategoryId ?? undefined,
+                    })
+                    toast.success('Reset to auto-categorization')
+                    onClose()
+                  }}
+                >
+                  Reset to auto
+                </button>
+              </p>
             )}
           </div>
 

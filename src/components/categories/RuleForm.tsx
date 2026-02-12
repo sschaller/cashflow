@@ -38,6 +38,10 @@ export function RuleForm({ rule, categories, onSave, onCancel }: RuleFormProps) 
   const [priority, setPriority] = useState(rule?.priority ?? 100)
   const [isEnabled, setIsEnabled] = useState(rule?.isEnabled ?? true)
 
+  // Only allow assigning to leaf categories (those with no children)
+  const parentIds = new Set(categories.filter((c) => c.parentId !== null).map((c) => c.parentId))
+  const leafCategories = categories.filter((c) => !parentIds.has(c.id!))
+
   const selectClass = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100'
   const inputClass = selectClass
 
@@ -74,7 +78,7 @@ export function RuleForm({ rule, categories, onSave, onCancel }: RuleFormProps) 
       <div>
         <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Assign to Category</label>
         <select className={`w-full ${selectClass}`} value={categoryId} onChange={(e) => setCategoryId(Number(e.target.value))}>
-          {categories.map((c) => (
+          {leafCategories.map((c) => (
             <option key={c.id} value={c.id}>
               {c.parentId !== null ? '  ' : ''}{c.name}
             </option>

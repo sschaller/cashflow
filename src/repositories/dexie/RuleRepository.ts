@@ -32,7 +32,7 @@ export class DexieRuleRepository implements IRuleRepository {
   }
 
   async getEnabled(): Promise<Rule[]> {
-    return db.rules.where('isEnabled').equals(1).sortBy('priority')
+    return db.rules.filter((r) => r.isEnabled).sortBy('priority')
   }
 
   async getByCategoryId(categoryId: number): Promise<Rule[]> {
