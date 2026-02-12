@@ -1,0 +1,187 @@
+import { useMemo, useState } from 'react'
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  flexRender,
+  type ColumnDef,
+  type SortingState,
+} from '@tanstack/react-table'
+import type { Transaction, Category } from '@/types/models.ts'
+import { formatDate } from '@/utils/dateUtils.ts'
+import { formatCurrency } from '@/utils/currencyUtils.ts'
+
+interface TransactionTableProps {
+  transactions: Transaction[]
+  categories: Category[]
+  onSelect?: (transaction: Transaction) => void
+}
+
+export function TransactionTable({ transactions, categories, onSelect }: TransactionTableProps) {
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'date', desc: true }])
+
+  const catMap = useMemo(() => {
+    const map = new Map<number, Category>()
+    for (const c of categories) map.set(c.id!, c)
+    return map
+  }, [categories])
+
+  const columns = useMemo<ColumnDef<Transaction>[]>(
+    () => [
+      {
+        accessorKey: 'date',
+        header: 'Date',
+        cell: (info) => formatDate(info.getValue<string>()),
+        size: 120,
+      },
+      {
+        accessorKey: 'description',
+        header: 'Description',
+        cell: (info) => (
+          <span className="max-w-lg truncate block">{info.getValue<string>()}</span>
+        ),
+      },
+      {
+        accessorKey: 'categoryId',
+        header: 'Category',
+        cell: (info) => {
+          const catId = info.getValue<number | undefined>()
+          const cat = catId ? catMap.get(catId) : undefined
+          if (!cat) return <span className="text-gray-400">-</span>
+          return (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: cat.color }} />
+              {cat.name}
+            </span>
+          )
+        },
+        size: 150,
+      },
+      {
+        accessorKey: 'amount',
+        header: 'Amount',
+        cell: (info) => {
+          const amount = info.getValue<number>()
+          return (
+            <span className={`font-mono ${amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatCurrency(amount)}
+            </span>
+          )
+        },
+        size: 120,
+      },
+      {
+        accessorKey: 'type',
+        header: 'Type',
+        cell: (info) => {
+          const type = info.getValue<string>()
+          const colors: Record<string, string> = {
+            income: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+            expense: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+            transfer: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
+          }
+          return (
+            <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${colors[type] ?? ''}`}>
+              {type}
+            </span>
+          )
+        },
+        size: 100,
+      },
+    ],
+    [catMap]
+  )
+
+  const table = useReactTable({
+    data: transactions,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: { pagination: { pageSize: 25 } },
+  })
+
+  return (
+    <div>
+      <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-gray-50 dark:bg-gray-900">
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <th
+                    key={header.id}
+                    className="cursor-pointer select-none whitespace-nowrap px-4 py-3 font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
+                    style={{ width: header.getSize() }}
+                    onClick={header.column.getToggleSortingHandler()}
+                  >
+                    <span className="flex items-center gap-1">
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                      {{ asc: ' \u2191', desc: ' \u2193' }[header.column.getIsSorted() as string] ?? ''}
+                    </span>
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </thead>
+          <tbody>
+            {table.getRowModel().rows.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  No transactions found
+                </td>
+              </tr>
+            ) : (
+              table.getRowModel().rows.map((row) => (
+                <tr
+                  key={row.id}
+                  className="border-t border-gray-100 transition-colors hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/50 cursor-pointer"
+                  onClick={() => onSelect?.(row.original)}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <td key={cell.id} className="px-4 py-3 text-gray-700 dark:text-gray-300">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      <div className="mt-4 flex items-center justify-between">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to{' '}
+          {Math.min(
+            (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
+            transactions.length
+          )}{' '}
+          of {transactions.length}
+        </p>
+        <div className="flex gap-2">
+          <button
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-gray-600 dark:text-gray-300"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            Previous
+          </button>
+          <button
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-gray-600 dark:text-gray-300"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}

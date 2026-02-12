@@ -1,0 +1,43 @@
+import { useEffect } from 'react'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
+import { RepositoryContextProvider } from '@/repositories/RepositoryContext.tsx'
+import { AppShell } from '@/components/layout/AppShell.tsx'
+import { useUIStore } from '@/stores/useUIStore.ts'
+import DashboardPage from '@/pages/DashboardPage.tsx'
+import TransactionsPage from '@/pages/TransactionsPage.tsx'
+import ImportPage from '@/pages/ImportPage.tsx'
+import CategoriesPage from '@/pages/CategoriesPage.tsx'
+import ChartsPage from '@/pages/ChartsPage.tsx'
+import SettingsPage from '@/pages/SettingsPage.tsx'
+
+function DarkModeManager() {
+  const darkMode = useUIStore((s) => s.darkMode)
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode)
+  }, [darkMode])
+
+  return null
+}
+
+export default function App() {
+  return (
+    <RepositoryContextProvider>
+      <DarkModeManager />
+      <BrowserRouter>
+        <Routes>
+          <Route element={<AppShell />}>
+            <Route index element={<DashboardPage />} />
+            <Route path="transactions" element={<TransactionsPage />} />
+            <Route path="import" element={<ImportPage />} />
+            <Route path="categories" element={<CategoriesPage />} />
+            <Route path="charts" element={<ChartsPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+          </Route>
+        </Routes>
+        <Toaster position="bottom-right" />
+      </BrowserRouter>
+    </RepositoryContextProvider>
+  )
+}
