@@ -7,6 +7,7 @@ import { useUIStore } from '@/stores/useUIStore.ts'
 import DashboardPage from '@/pages/DashboardPage.tsx'
 import TransactionsPage from '@/pages/TransactionsPage.tsx'
 import ImportPage from '@/pages/ImportPage.tsx'
+import CategorizePage from '@/pages/CategorizePage.tsx'
 import CategoriesPage from '@/pages/CategoriesPage.tsx'
 import ChartsPage from '@/pages/ChartsPage.tsx'
 import SettingsPage from '@/pages/SettingsPage.tsx'
@@ -31,6 +32,7 @@ export default function App() {
             <Route index element={<DashboardPage />} />
             <Route path="transactions" element={<TransactionsPage />} />
             <Route path="import" element={<ImportPage />} />
+            <Route path="categorize" element={<CategorizePage />} />
             <Route path="categories" element={<CategoriesPage />} />
             <Route path="charts" element={<ChartsPage />} />
             <Route path="settings" element={<SettingsPage />} />

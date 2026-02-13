@@ -1,4 +1,4 @@
-import { parse, isValid } from 'date-fns'
+import { parse, isValid, format } from 'date-fns'
 import type { ColumnMapping, AmountConfig } from '@/types/models.ts'
 import type { ParsedRow } from './types.ts'
 
@@ -24,20 +24,20 @@ export function parseDate(value: string, dateFormat: string): string | null {
   // Try the specified format first
   const parsed = parse(value.trim(), dateFormat, new Date())
   if (isValid(parsed)) {
-    return parsed.toISOString().split('T')[0]
+    return format(parsed, 'yyyy-MM-dd')
   }
 
   // Try ISO format directly
   const isoDate = new Date(value.trim())
   if (isValid(isoDate) && value.includes('-')) {
-    return isoDate.toISOString().split('T')[0]
+    return format(isoDate, 'yyyy-MM-dd')
   }
 
   // Try common formats
   for (const fmt of commonDateFormats) {
     const attempt = parse(value.trim(), fmt, new Date())
     if (isValid(attempt)) {
-      return attempt.toISOString().split('T')[0]
+      return format(attempt, 'yyyy-MM-dd')
     }
   }
 
