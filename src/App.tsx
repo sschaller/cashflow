@@ -28,7 +28,7 @@ export default function App() {
     <RepositoryContextProvider>
       <SyncProvider>
       <DarkModeManager />
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
         <Routes>
           <Route element={<AppShell />}>
             <Route index element={<DashboardPage />} />
