@@ -21,6 +21,7 @@ export function SyncSettings() {
 
   const [showPassphrase, setShowPassphrase] = useState(false)
   const [passphraseMode, setPassphraseMode] = useState<'setup' | 'unlock'>('setup')
+  const deleteRemoteFile = useSyncStore((s) => s.deleteRemoteFile)
   const [loading, setLoading] = useState(false)
 
   const clientIdConfigured = !!import.meta.env.VITE_GOOGLE_CLIENT_ID
@@ -53,6 +54,19 @@ export function SyncSettings() {
       setShowPassphrase(true)
     } catch {
       toast.error('Failed to sign in with Google')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeleteRemote = async () => {
+    if (!confirm('Delete the remote sync file? This cannot be undone. Your local data will not be affected.')) return
+    setLoading(true)
+    try {
+      await deleteRemoteFile()
+      toast.success('Remote sync file deleted')
+    } catch {
+      toast.error('Failed to delete remote sync file')
     } finally {
       setLoading(false)
     }
@@ -125,6 +139,9 @@ export function SyncSettings() {
                     Sync Now
                   </Button>
                 )}
+                <Button variant="danger" size="sm" onClick={handleDeleteRemote} disabled={loading || status === 'syncing'}>
+                  Reset Remote
+                </Button>
                 <Button variant="danger" size="sm" onClick={handleDisconnect}>
                   Disconnect
                 </Button>

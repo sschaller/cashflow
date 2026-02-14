@@ -58,6 +58,7 @@ interface SyncState {
   syncNow: () => Promise<void>
   enableSync: () => void
   disableSync: () => void
+  deleteRemoteFile: () => Promise<void>
   setStatus: (status: SyncStatus) => void
   setError: (error: string) => void
   clearError: () => void
@@ -284,6 +285,21 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   disableSync: () => {
     localStorage.setItem('sync:enabled', 'false')
     set({ isSyncEnabled: false, status: 'idle' })
+  },
+
+  deleteRemoteFile: async () => {
+    const state = get()
+    if (!state.accessToken) throw new Error('Not authenticated')
+
+    const drive = new GoogleDriveClient(async () => get().accessToken!)
+    const fileId = await drive.findSyncFile()
+    if (fileId) {
+      await drive.deleteSyncFile(fileId)
+    }
+
+    localStorage.removeItem('sync:lastSyncAt')
+    localStorage.removeItem('sync:syncVersion')
+    set({ lastSyncAt: null, syncVersion: 0, cryptoKey: null, salt: null })
   },
 
   setStatus: (status) => set({ status }),
