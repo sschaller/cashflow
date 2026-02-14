@@ -7,10 +7,10 @@ export function AppShell() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen)
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
       <Sidebar />
       <div
-        className={`flex flex-1 flex-col transition-all duration-300 ${
+        className={`flex min-w-0 flex-1 flex-col transition-all duration-300 ${
           sidebarOpen ? 'md:ml-64' : 'md:ml-16'
         }`}
       >

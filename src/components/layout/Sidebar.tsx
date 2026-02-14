@@ -28,7 +28,7 @@ export function Sidebar() {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-30 flex w-64 flex-col bg-gray-900 text-white transition-all duration-300 md:w-auto ${
+        className={`fixed inset-y-0 left-0 z-30 flex w-64 flex-col bg-gray-900 text-white transition-all duration-300 ${
           sidebarOpen ? 'translate-x-0 md:w-64' : '-translate-x-full md:translate-x-0 md:w-16'
         }`}
       >
@@ -36,7 +36,7 @@ export function Sidebar() {
           {sidebarOpen ? (
             <h1 className="text-xl font-bold tracking-tight">Cashflow</h1>
           ) : (
-            <span className="text-xl font-bold">F</span>
+            <span className="text-xl font-bold">C</span>
           )}
         </div>
 
