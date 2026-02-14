@@ -34,7 +34,7 @@ export function Sidebar() {
       >
         <div className="flex h-16 items-center justify-center border-b border-gray-700 px-4">
           {sidebarOpen ? (
-            <h1 className="text-xl font-bold tracking-tight">Finance</h1>
+            <h1 className="text-xl font-bold tracking-tight">Cashflow</h1>
           ) : (
             <span className="text-xl font-bold">F</span>
           )}

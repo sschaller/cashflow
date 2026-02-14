@@ -1,7 +1,7 @@
 {
-  "name": "Finance Tracker",
-  "short_name": "Finance",
-  "description": "Personal finance tracker with transaction import and visualization",
+  "name": "Cashflow",
+  "short_name": "Cashflow",
+  "description": "Personal spending tracker with transaction import, budgeting, and encrypted cloud sync",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
