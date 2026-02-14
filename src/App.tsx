@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast'
 import { RepositoryContextProvider } from '@/repositories/RepositoryContext.tsx'
 import { AppShell } from '@/components/layout/AppShell.tsx'
 import { useUIStore } from '@/stores/useUIStore.ts'
+import { SyncProvider } from '@/components/sync/SyncProvider.tsx'
 import DashboardPage from '@/pages/DashboardPage.tsx'
 import TransactionsPage from '@/pages/TransactionsPage.tsx'
 import ImportPage from '@/pages/ImportPage.tsx'
@@ -25,6 +26,7 @@ function DarkModeManager() {
 export default function App() {
   return (
     <RepositoryContextProvider>
+      <SyncProvider>
       <DarkModeManager />
       <BrowserRouter>
         <Routes>
@@ -40,6 +42,7 @@ export default function App() {
         </Routes>
         <Toaster position="bottom-right" />
       </BrowserRouter>
+      </SyncProvider>
     </RepositoryContextProvider>
   )
 }

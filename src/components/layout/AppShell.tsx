@@ -11,7 +11,7 @@ export function AppShell() {
       <Sidebar />
       <div
         className={`flex flex-1 flex-col transition-all duration-300 ${
-          sidebarOpen ? 'ml-64' : 'ml-16'
+          sidebarOpen ? 'md:ml-64' : 'md:ml-16'
         }`}
       >
         <Header />

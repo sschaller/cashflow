@@ -10,6 +10,7 @@ export interface Account {
   createdAt: string
   updatedAt: string
   _syncVersion?: number
+  _deleted?: boolean
 }
 
 export interface Transaction {
@@ -27,7 +28,9 @@ export interface Transaction {
   isManualCategory: boolean
   importProfileId?: number
   importedAt: string
+  updatedAt?: string
   _syncVersion?: number
+  _deleted?: boolean
 }
 
 export interface Category {
@@ -38,7 +41,9 @@ export interface Category {
   icon: string
   isSystem: boolean
   sortOrder: number
+  updatedAt?: string
   _syncVersion?: number
+  _deleted?: boolean
 }
 
 export interface RuleCondition {
@@ -55,7 +60,9 @@ export interface Rule {
   categoryId: number
   priority: number
   isEnabled: boolean
+  updatedAt?: string
   _syncVersion?: number
+  _deleted?: boolean
 }
 
 export interface ColumnMapping {
@@ -85,5 +92,7 @@ export interface ImportProfile {
   amountConfig: AmountConfig
   skipRows: number
   encoding: string
+  updatedAt?: string
   _syncVersion?: number
+  _deleted?: boolean
 }

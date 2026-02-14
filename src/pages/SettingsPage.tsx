@@ -2,6 +2,7 @@ import { Card } from '@/components/ui/Card.tsx'
 import { AccountManager } from '@/components/settings/AccountManager.tsx'
 import { DataManagement } from '@/components/settings/DataManagement.tsx'
 import { ImportProfileManager } from '@/components/settings/ImportProfileManager.tsx'
+import { SyncSettings } from '@/components/settings/SyncSettings.tsx'
 import { useUIStore } from '@/stores/useUIStore.ts'
 
 export default function SettingsPage() {
@@ -14,6 +15,10 @@ export default function SettingsPage() {
       <p className="mb-8 text-gray-600 dark:text-gray-400">Manage accounts, data, and preferences</p>
 
       <div className="space-y-6">
+        <Card>
+          <SyncSettings />
+        </Card>
+
         <Card>
           <AccountManager />
         </Card>

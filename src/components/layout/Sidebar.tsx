@@ -14,56 +14,70 @@ const navItems = [
 
 export function Sidebar() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen)
+  const setSidebarOpen = useUIStore((s) => s.setSidebarOpen)
   const uncategorizedCount = useUncategorizedTransactions().length
 
   return (
-    <aside
-      className={`fixed inset-y-0 left-0 z-30 flex flex-col bg-gray-900 text-white transition-all duration-300 ${
-        sidebarOpen ? 'w-64' : 'w-16'
-      }`}
-    >
-      <div className="flex h-16 items-center justify-center border-b border-gray-700 px-4">
-        {sidebarOpen ? (
-          <h1 className="text-xl font-bold tracking-tight">Finance</h1>
-        ) : (
-          <span className="text-xl font-bold">F</span>
-        )}
-      </div>
+    <>
+      {/* Backdrop overlay on mobile when sidebar is open */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-20 bg-black/50 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
-      <nav className="mt-4 flex-1 space-y-1 px-2">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className={({ isActive }) =>
-              `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-gray-800 text-white'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              }`
-            }
-          >
-            <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
-            </svg>
-            {sidebarOpen && (
-              <span className="flex flex-1 items-center justify-between">
-                {item.label}
-                {'badge' in item && item.badge && uncategorizedCount > 0 && (
-                  <span className="inline-flex items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">
-                    {uncategorizedCount}
-                  </span>
-                )}
-              </span>
-            )}
-            {!sidebarOpen && 'badge' in item && item.badge && uncategorizedCount > 0 && (
-              <span className="absolute left-9 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-                {uncategorizedCount > 9 ? '9+' : uncategorizedCount}
-              </span>
-            )}
-          </NavLink>
-        ))}
-      </nav>
-    </aside>
+      <aside
+        className={`fixed inset-y-0 left-0 z-30 flex w-64 flex-col bg-gray-900 text-white transition-all duration-300 md:w-auto ${
+          sidebarOpen ? 'translate-x-0 md:w-64' : '-translate-x-full md:translate-x-0 md:w-16'
+        }`}
+      >
+        <div className="flex h-16 items-center justify-center border-b border-gray-700 px-4">
+          {sidebarOpen ? (
+            <h1 className="text-xl font-bold tracking-tight">Finance</h1>
+          ) : (
+            <span className="text-xl font-bold">F</span>
+          )}
+        </div>
+
+        <nav className="mt-4 flex-1 space-y-1 px-2">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              onClick={() => {
+                if (window.innerWidth < 768) setSidebarOpen(false)
+              }}
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'bg-gray-800 text-white'
+                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                }`
+              }
+            >
+              <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+              </svg>
+              {sidebarOpen && (
+                <span className="flex flex-1 items-center justify-between">
+                  {item.label}
+                  {'badge' in item && item.badge && uncategorizedCount > 0 && (
+                    <span className="inline-flex items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">
+                      {uncategorizedCount}
+                    </span>
+                  )}
+                </span>
+              )}
+              {!sidebarOpen && 'badge' in item && item.badge && uncategorizedCount > 0 && (
+                <span className="absolute left-9 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                  {uncategorizedCount > 9 ? '9+' : uncategorizedCount}
+                </span>
+              )}
+            </NavLink>
+          ))}
+        </nav>
+      </aside>
+    </>
   )
 }
