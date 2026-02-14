@@ -8,6 +8,7 @@ import { useRepositories } from '@/repositories/RepositoryContext.tsx'
 import { getParserForFile } from '@/parsers/index.ts'
 import { autoDetectMapping, autoDetectDateFormat } from '@/parsers/columnMapper.ts'
 import { readFileAsText } from '@/utils/fileHelpers.ts'
+import { findOptimalSkipRows } from '@/parsers/autoSkipDetect.ts'
 import { importTransactions } from '@/services/importService.ts'
 import type { ParseResult } from '@/parsers/types.ts'
 import type { ColumnMapping, AmountConfig, Account } from '@/types/models.ts'
@@ -79,7 +80,9 @@ export function ImportWizard() {
     setFile(f)
     const content = await readFileAsText(f)
     setFileContent(content)
-    await parseWithSkip(content, f.name, skipRows)
+    const optimalSkip = await findOptimalSkipRows(content, f.name)
+    setSkipRows(optimalSkip)
+    await parseWithSkip(content, f.name, optimalSkip)
     setStep(1)
   }
 
