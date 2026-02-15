@@ -74,10 +74,33 @@ async function initTokenClient(callback: (response: google.accounts.oauth2.Token
   })
 }
 
+function saveToken(token: string, expiresAt: number) {
+  sessionStorage.setItem('sync:accessToken', token)
+  sessionStorage.setItem('sync:tokenExpiresAt', String(expiresAt))
+}
+
+function clearToken() {
+  sessionStorage.removeItem('sync:accessToken')
+  sessionStorage.removeItem('sync:tokenExpiresAt')
+}
+
+function loadToken(): { accessToken: string; tokenExpiresAt: number } | null {
+  const token = sessionStorage.getItem('sync:accessToken')
+  const expiresAt = sessionStorage.getItem('sync:tokenExpiresAt')
+  if (token && expiresAt) {
+    const exp = parseInt(expiresAt, 10)
+    if (Date.now() < exp) return { accessToken: token, tokenExpiresAt: exp }
+  }
+  clearToken()
+  return null
+}
+
+const restored = loadToken()
+
 export const useSyncStore = create<SyncState>((set, get) => ({
-  isAuthenticated: false,
-  accessToken: null,
-  tokenExpiresAt: null,
+  isAuthenticated: restored !== null,
+  accessToken: restored?.accessToken ?? null,
+  tokenExpiresAt: restored?.tokenExpiresAt ?? null,
 
   cryptoKey: null,
   salt: null,
@@ -100,10 +123,12 @@ export const useSyncStore = create<SyncState>((set, get) => ({
               reject(new Error(response.error))
               return
             }
+            const expiresAt = Date.now() + response.expires_in * 1000
+            saveToken(response.access_token, expiresAt)
             set({
               isAuthenticated: true,
               accessToken: response.access_token,
-              tokenExpiresAt: Date.now() + response.expires_in * 1000,
+              tokenExpiresAt: expiresAt,
               lastError: null,
             })
             resolve()
@@ -129,6 +154,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     if (accessToken && typeof google !== 'undefined') {
       google.accounts.oauth2.revoke(accessToken)
     }
+    clearToken()
     set({
       isAuthenticated: false,
       accessToken: null,
@@ -149,10 +175,12 @@ export const useSyncStore = create<SyncState>((set, get) => ({
               resolve(false)
               return
             }
+            const expiresAt = Date.now() + response.expires_in * 1000
+            saveToken(response.access_token, expiresAt)
             set({
               isAuthenticated: true,
               accessToken: response.access_token,
-              tokenExpiresAt: Date.now() + response.expires_in * 1000,
+              tokenExpiresAt: expiresAt,
             })
             resolve(true)
           },
@@ -265,7 +293,8 @@ export const useSyncStore = create<SyncState>((set, get) => ({
 
       // Token expired
       if (err instanceof DriveApiError && err.status === 401) {
-        set({ status: 'needs-auth', lastError: 'Session expired. Please sign in again.' })
+        clearToken()
+        set({ isAuthenticated: false, accessToken: null, tokenExpiresAt: null, status: 'needs-auth', lastError: 'Session expired. Please sign in again.' })
         return
       }
 
