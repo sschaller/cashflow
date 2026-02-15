@@ -75,24 +75,86 @@ async function initTokenClient(callback: (response: google.accounts.oauth2.Token
 }
 
 function saveToken(token: string, expiresAt: number) {
-  sessionStorage.setItem('sync:accessToken', token)
-  sessionStorage.setItem('sync:tokenExpiresAt', String(expiresAt))
+  localStorage.setItem('sync:accessToken', token)
+  localStorage.setItem('sync:tokenExpiresAt', String(expiresAt))
 }
 
 function clearToken() {
-  sessionStorage.removeItem('sync:accessToken')
-  sessionStorage.removeItem('sync:tokenExpiresAt')
+  localStorage.removeItem('sync:accessToken')
+  localStorage.removeItem('sync:tokenExpiresAt')
 }
 
 function loadToken(): { accessToken: string; tokenExpiresAt: number } | null {
-  const token = sessionStorage.getItem('sync:accessToken')
-  const expiresAt = sessionStorage.getItem('sync:tokenExpiresAt')
+  const token = localStorage.getItem('sync:accessToken')
+  const expiresAt = localStorage.getItem('sync:tokenExpiresAt')
   if (token && expiresAt) {
     const exp = parseInt(expiresAt, 10)
     if (Date.now() < exp) return { accessToken: token, tokenExpiresAt: exp }
   }
   clearToken()
   return null
+}
+
+// --- CryptoKey persistence via IndexedDB ---
+const KEY_DB_NAME = 'sync-keystore'
+const KEY_STORE_NAME = 'keys'
+
+function openKeyDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(KEY_DB_NAME, 1)
+    req.onupgradeneeded = () => req.result.createObjectStore(KEY_STORE_NAME)
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error)
+  })
+}
+
+async function saveCryptoKey(key: CryptoKey, salt: Uint8Array): Promise<void> {
+  const db = await openKeyDB()
+  const tx = db.transaction(KEY_STORE_NAME, 'readwrite')
+  const store = tx.objectStore(KEY_STORE_NAME)
+  store.put(key, 'cryptoKey')
+  store.put(Array.from(salt), 'salt')
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => { db.close(); resolve() }
+    tx.onerror = () => { db.close(); reject(tx.error) }
+  })
+}
+
+async function loadCryptoKey(): Promise<{ cryptoKey: CryptoKey; salt: Uint8Array } | null> {
+  try {
+    const db = await openKeyDB()
+    const tx = db.transaction(KEY_STORE_NAME, 'readonly')
+    const store = tx.objectStore(KEY_STORE_NAME)
+    const keyReq = store.get('cryptoKey')
+    const saltReq = store.get('salt')
+    return new Promise((resolve) => {
+      tx.oncomplete = () => {
+        db.close()
+        if (keyReq.result && saltReq.result) {
+          resolve({ cryptoKey: keyReq.result, salt: new Uint8Array(saltReq.result) })
+        } else {
+          resolve(null)
+        }
+      }
+      tx.onerror = () => { db.close(); resolve(null) }
+    })
+  } catch {
+    return null
+  }
+}
+
+async function clearCryptoKey(): Promise<void> {
+  try {
+    const db = await openKeyDB()
+    const tx = db.transaction(KEY_STORE_NAME, 'readwrite')
+    const store = tx.objectStore(KEY_STORE_NAME)
+    store.delete('cryptoKey')
+    store.delete('salt')
+    return new Promise((resolve) => {
+      tx.oncomplete = () => { db.close(); resolve() }
+      tx.onerror = () => { db.close(); resolve() }
+    })
+  } catch { /* ignore */ }
 }
 
 const restored = loadToken()
@@ -155,6 +217,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       google.accounts.oauth2.revoke(accessToken)
     }
     clearToken()
+    clearCryptoKey()
     set({
       isAuthenticated: false,
       accessToken: null,
@@ -200,6 +263,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   setPassphrase: async (passphrase: string, existingSalt?: Uint8Array) => {
     const salt = existingSalt ?? generateSalt()
     const cryptoKey = await deriveKey(passphrase, salt)
+    await saveCryptoKey(cryptoKey, salt)
     set({ cryptoKey, salt })
   },
 
@@ -229,10 +293,14 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     // This will throw OperationError if passphrase is wrong
     await decryptPayload(payload, cryptoKey)
 
+    await saveCryptoKey(cryptoKey, salt)
     set({ cryptoKey, salt })
   },
 
-  clearKey: () => set({ cryptoKey: null, salt: null }),
+  clearKey: () => {
+    clearCryptoKey()
+    set({ cryptoKey: null, salt: null })
+  },
 
   syncNow: async () => {
     const state = get()
@@ -325,6 +393,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
 
     localStorage.removeItem('sync:lastSyncAt')
     localStorage.removeItem('sync:syncVersion')
+    await clearCryptoKey()
     set({ lastSyncAt: null, syncVersion: 0, cryptoKey: null, salt: null })
   },
 
@@ -332,3 +401,10 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   setError: (error) => set({ lastError: error, status: 'error' }),
   clearError: () => set({ lastError: null }),
 }))
+
+// Restore CryptoKey from IndexedDB on startup
+loadCryptoKey().then((stored) => {
+  if (stored) {
+    useSyncStore.setState({ cryptoKey: stored.cryptoKey, salt: stored.salt })
+  }
+})
