@@ -4,7 +4,7 @@ import { useUncategorizedTransactions } from '@/hooks/useUncategorizedTransactio
 import { useCategories } from '@/hooks/useCategories.ts'
 import { useAccounts } from '@/hooks/useAccounts.ts'
 import { useRepositories } from '@/repositories/RepositoryContext.tsx'
-import { CategoryPicker } from '@/components/categorize/CategoryPicker.tsx'
+import { CategoryPicker, type CategoryPickerHandle } from '@/components/categorize/CategoryPicker.tsx'
 import { RuleForm } from '@/components/categories/RuleForm.tsx'
 import { Button } from '@/components/ui/Button.tsx'
 import { formatDate } from '@/utils/dateUtils.ts'
@@ -26,6 +26,7 @@ export default function CategorizePage() {
   const [skippedIds, setSkippedIds] = useState<Set<number>>(new Set())
   const [undoStack, setUndoStack] = useState<UndoEntry[]>([])
   const [showRuleForm, setShowRuleForm] = useState(false)
+  const pickerRef = useRef<CategoryPickerHandle>(null)
   const [totalAtStart] = useState<number | null>(null)
   const totalRef = useRef<number | null>(null)
 
@@ -45,10 +46,6 @@ export default function CategorizePage() {
     : undefined
   const accountName = currentAccount?.name ?? 'Unknown'
   const currentCurrency = currentAccount?.currency ?? 'USD'
-
-  // Leaf categories for keyboard shortcut ordering
-  const parentIds = new Set(categories.filter((c) => c.parentId !== null).map((c) => c.parentId))
-  const leafCategories = categories.filter((c) => !parentIds.has(c.id!))
 
   const handleSelect = useCallback(
     async (categoryId: number) => {
@@ -120,7 +117,7 @@ export default function CategorizePage() {
         target.tagName === 'TEXTAREA' ||
         target.tagName === 'SELECT' ||
         target.isContentEditable
-      // Allow shortcuts in search only for number keys and s
+      // Allow shortcuts in search only for number keys
       const isSearchInput = target.hasAttribute('data-category-search')
 
       if (e.key === 'Escape') {
@@ -139,42 +136,15 @@ export default function CategorizePage() {
       if (isInput && !isSearchInput) return
       if (e.metaKey || e.ctrlKey || e.altKey) return
 
-      if (e.key === 's' && !isSearchInput) {
-        e.preventDefault()
-        handleSkip()
-        return
-      }
-
-      if (e.key === 'r' && !isSearchInput) {
-        e.preventDefault()
-        setShowRuleForm(true)
-        return
-      }
-
-      // Enter selects first category (skip if already handled by search input)
-      if (e.key === 'Enter' && !isSearchInput) {
-        const cat = leafCategories[0]
-        if (cat) {
-          e.preventDefault()
-          handleSelect(cat.id!)
-        }
-        return
-      }
-
-      // Number keys 1-9 for quick category assignment
-      const num = parseInt(e.key, 10)
-      if (num >= 1 && num <= 9) {
-        const cat = leafCategories[num - 1]
-        if (cat) {
-          e.preventDefault()
-          handleSelect(cat.id!)
-        }
+      // Letter keys auto-focus the search input
+      if (/^[a-z]$/i.test(e.key) && !isInput) {
+        pickerRef.current?.focusSearch()
       }
     }
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [handleSelect, handleSkip, handleUndo, leafCategories])
+  }, [handleUndo])
 
   // All done state
   if (uncategorized.length === 0 && effectiveTotal > 0) {
@@ -309,19 +279,13 @@ export default function CategorizePage() {
             <div className="flex gap-2">
               <Button variant="ghost" size="sm" onClick={() => setShowRuleForm(true)}>
                 Create Rule
-                <kbd className="ml-1 rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-400 dark:bg-gray-700 dark:text-gray-500">
-                  R
-                </kbd>
               </Button>
               <Button variant="ghost" size="sm" onClick={handleSkip}>
                 Skip
-                <kbd className="ml-1 rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-400 dark:bg-gray-700 dark:text-gray-500">
-                  S
-                </kbd>
               </Button>
             </div>
           </div>
-          <CategoryPicker key={currentTx.id} categories={categories} onSelect={handleSelect} />
+          <CategoryPicker ref={pickerRef} key={currentTx.id} categories={categories} onSelect={handleSelect} />
         </div>
       )}
     </div>

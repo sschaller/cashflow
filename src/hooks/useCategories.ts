@@ -3,7 +3,9 @@ import { db } from '@/db/index.ts'
 import type { Category } from '@/types/models.ts'
 
 export function useCategories(): Category[] {
-  const categories = useLiveQuery(() => db.categories.orderBy('sortOrder').toArray())
+  const categories = useLiveQuery(() =>
+    db.categories.orderBy('sortOrder').filter(c => !c._deleted).toArray()
+  )
   return categories ?? []
 }
 
