@@ -1,16 +1,18 @@
 import { Doughnut } from 'react-chartjs-2'
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js'
 import { ChartContainer } from './ChartContainer.tsx'
+import { formatCurrencyOrPlain } from '@/utils/currencyUtils.ts'
 import type { CategoryBreakdownItem } from '@/types/charts.ts'
 
 ChartJS.register(ArcElement, Tooltip, Legend)
 
 interface ExpensePieChartProps {
   data: CategoryBreakdownItem[]
+  currency: string | null
   onCategoryClick?: (categoryId: number) => void
 }
 
-export function ExpensePieChart({ data, onCategoryClick }: ExpensePieChartProps) {
+export function ExpensePieChart({ data, currency, onCategoryClick }: ExpensePieChartProps) {
   const chartData = {
     labels: data.map((d) => d.categoryName),
     datasets: [
@@ -43,7 +45,7 @@ export function ExpensePieChart({ data, onCategoryClick }: ExpensePieChartProps)
           label: (context: { label: string; parsed: number; dataset: { data: number[] } }) => {
             const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0)
             const pct = ((context.parsed / total) * 100).toFixed(1)
-            return ` ${context.label}: $${context.parsed.toFixed(2)} (${pct}%)`
+            return ` ${context.label}: ${formatCurrencyOrPlain(context.parsed, currency)} (${pct}%)`
           },
         },
       },

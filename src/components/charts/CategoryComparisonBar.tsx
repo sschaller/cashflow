@@ -8,16 +8,18 @@ import {
   type TooltipItem,
 } from 'chart.js'
 import { ChartContainer } from './ChartContainer.tsx'
+import { formatCurrencyOrPlain } from '@/utils/currencyUtils.ts'
 import type { CategoryBreakdownItem } from '@/types/charts.ts'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip)
 
 interface CategoryComparisonBarProps {
   data: CategoryBreakdownItem[]
+  currency: string | null
   onCategoryClick?: (categoryId: number) => void
 }
 
-export function CategoryComparisonBar({ data, onCategoryClick }: CategoryComparisonBarProps) {
+export function CategoryComparisonBar({ data, currency, onCategoryClick }: CategoryComparisonBarProps) {
   const top10 = data.slice(0, 10)
 
   const chartData = {
@@ -41,7 +43,7 @@ export function CategoryComparisonBar({ data, onCategoryClick }: CategoryCompari
       tooltip: {
         callbacks: {
           label: (context: TooltipItem<'bar'>) => {
-            return ` $${(context.parsed.x ?? 0).toFixed(2)}`
+            return ` ${formatCurrencyOrPlain(context.parsed.x ?? 0, currency)}`
           },
         },
       },
@@ -50,7 +52,7 @@ export function CategoryComparisonBar({ data, onCategoryClick }: CategoryCompari
       x: {
         beginAtZero: true,
         ticks: {
-          callback: (value: string | number) => `$${Number(value).toLocaleString()}`,
+          callback: (value: string | number) => formatCurrencyOrPlain(Number(value), currency),
         },
       },
       y: {

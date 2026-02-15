@@ -10,15 +10,17 @@ import {
 } from 'chart.js'
 import { ChartContainer } from './ChartContainer.tsx'
 import { format, parseISO } from 'date-fns'
+import { formatCurrencyOrPlain } from '@/utils/currencyUtils.ts'
 import type { MonthlyTotal } from '@/types/charts.ts'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 
 interface IncomeExpenseBarProps {
   data: MonthlyTotal[]
+  currency: string | null
 }
 
-export function IncomeExpenseBar({ data }: IncomeExpenseBarProps) {
+export function IncomeExpenseBar({ data, currency }: IncomeExpenseBarProps) {
   const chartData = {
     labels: data.map((d) => format(parseISO(d.month + '-01'), 'MMM yyyy')),
     datasets: [
@@ -48,7 +50,7 @@ export function IncomeExpenseBar({ data }: IncomeExpenseBarProps) {
       tooltip: {
         callbacks: {
           label: (context: TooltipItem<'bar'>) => {
-            return ` ${context.dataset.label}: $${(context.parsed.y ?? 0).toFixed(2)}`
+            return ` ${context.dataset.label}: ${formatCurrencyOrPlain(context.parsed.y ?? 0, currency)}`
           },
         },
       },
@@ -60,7 +62,7 @@ export function IncomeExpenseBar({ data }: IncomeExpenseBarProps) {
       y: {
         beginAtZero: true,
         ticks: {
-          callback: (value: string | number) => `$${Number(value).toLocaleString()}`,
+          callback: (value: string | number) => formatCurrencyOrPlain(Number(value), currency),
         },
       },
     },

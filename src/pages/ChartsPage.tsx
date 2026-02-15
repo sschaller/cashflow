@@ -18,7 +18,7 @@ export default function ChartsPage() {
   const setFilter = useFilterStore((s) => s.setFilter)
   const categories = useCategories()
 
-  const { transactions, categoryBreakdown, monthlyTotals, loading } = useDashboardData(startDate, endDate)
+  const { transactions, categoryBreakdown, monthlyTotals, loading, currency } = useDashboardData(startDate, endDate)
 
   const handleCategoryClick = (categoryId: number) => {
     setFilter('categoryId', categoryId)
@@ -49,10 +49,10 @@ export default function ChartsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <ExpensePieChart data={categoryBreakdown} onCategoryClick={handleCategoryClick} />
-        <IncomeExpenseBar data={monthlyTotals} />
-        <CategoryComparisonBar data={categoryBreakdown} onCategoryClick={handleCategoryClick} />
-        <SankeyDiagram transactions={transactions} categories={categories} />
+        <ExpensePieChart data={categoryBreakdown} currency={currency} onCategoryClick={handleCategoryClick} />
+        <IncomeExpenseBar data={monthlyTotals} currency={currency} />
+        <CategoryComparisonBar data={categoryBreakdown} currency={currency} onCategoryClick={handleCategoryClick} />
+        <SankeyDiagram transactions={transactions} categories={categories} currency={currency} />
       </div>
     </div>
   )

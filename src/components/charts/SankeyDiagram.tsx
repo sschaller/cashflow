@@ -2,11 +2,13 @@ import { useRef, useEffect, useMemo } from 'react'
 import { sankey, sankeyLinkHorizontal, type SankeyNode as D3SankeyNode, type SankeyLink as D3SankeyLink } from 'd3-sankey'
 import { scaleOrdinal } from 'd3-scale'
 import { ChartContainer } from './ChartContainer.tsx'
+import { formatCurrencyOrPlain } from '@/utils/currencyUtils.ts'
 import type { Transaction, Category } from '@/types/models.ts'
 
 interface SankeyDiagramProps {
   transactions: Transaction[]
   categories: Category[]
+  currency: string | null
 }
 
 interface SNode {
@@ -20,7 +22,7 @@ interface SLink {
   value: number
 }
 
-export function SankeyDiagram({ transactions, categories }: SankeyDiagramProps) {
+export function SankeyDiagram({ transactions, categories, currency }: SankeyDiagramProps) {
   const svgRef = useRef<SVGSVGElement>(null)
 
   const catMap = useMemo(() => {
@@ -132,7 +134,7 @@ export function SankeyDiagram({ transactions, categories }: SankeyDiagramProps) 
       const title = document.createElementNS('http://www.w3.org/2000/svg', 'title')
       const sName = (link.source as D3SankeyNode<SNode, SLink>).name
       const tName = (link.target as D3SankeyNode<SNode, SLink>).name
-      title.textContent = `${sName} \u2192 ${tName}: $${(link.value ?? 0).toFixed(2)}`
+      title.textContent = `${sName} \u2192 ${tName}: ${formatCurrencyOrPlain(link.value ?? 0, currency)}`
       path.appendChild(title)
       linkGroup.appendChild(path)
     }
@@ -156,7 +158,7 @@ export function SankeyDiagram({ transactions, categories }: SankeyDiagramProps) 
       rect.setAttribute('rx', '2')
 
       const title = document.createElementNS('http://www.w3.org/2000/svg', 'title')
-      title.textContent = `${node.name}: $${(node.value ?? 0).toFixed(2)}`
+      title.textContent = `${node.name}: ${formatCurrencyOrPlain(node.value ?? 0, currency)}`
       rect.appendChild(title)
       nodeGroup.appendChild(rect)
 
@@ -172,7 +174,7 @@ export function SankeyDiagram({ transactions, categories }: SankeyDiagramProps) 
       nodeGroup.appendChild(text)
     }
     svg.appendChild(nodeGroup)
-  }, [nodes, links, isEmpty])
+  }, [nodes, links, isEmpty, currency])
 
   return (
     <ChartContainer title="Money Flow (Sankey)" empty={isEmpty}>
