@@ -24,6 +24,7 @@ export interface Transaction {
   type: TransactionType
   tags: string[]
   notes: string
+  bankCategory?: string
   hash: string
   isManualCategory: boolean
   importProfileId?: number

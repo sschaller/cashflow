@@ -15,6 +15,7 @@ const fieldOptions: { value: RuleField; label: string }[] = [
   { value: 'amount', label: 'Amount' },
   { value: 'date', label: 'Date' },
   { value: 'accountId', label: 'Account' },
+  { value: 'bankCategory', label: 'Bank Category' },
 ]
 
 const operatorOptions: { value: RuleOperator; label: string; fields?: RuleField[] }[] = [

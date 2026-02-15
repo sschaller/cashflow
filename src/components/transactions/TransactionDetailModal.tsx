@@ -110,6 +110,12 @@ export function TransactionDetailModal({ transaction, onClose, categories, curre
               <span className="text-gray-500 dark:text-gray-400">Description</span>
               <p className="font-medium text-gray-900 dark:text-white">{transaction.description}</p>
             </div>
+            {transaction.bankCategory && (
+              <div className="col-span-2">
+                <span className="text-gray-500 dark:text-gray-400">Bank Category</span>
+                <p className="font-medium text-gray-900 dark:text-white">{transaction.bankCategory}</p>
+              </div>
+            )}
           </div>
 
           <div>

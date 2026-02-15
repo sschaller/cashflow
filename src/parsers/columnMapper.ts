@@ -7,6 +7,7 @@ export interface MappedTransaction {
   amount: number
   description: string
   normalizedDescription: string
+  bankCategory?: string
 }
 
 const commonDateFormats = [
@@ -102,12 +103,15 @@ export function mapRow(
   if (amount === null) return null
 
   const description = row[mapping.description] ?? ''
+  const rawCategory = mapping.category ? row[mapping.category]?.trim() : undefined
+  const bankCategory = rawCategory || undefined
 
   return {
     date,
     amount,
     description: description.trim(),
     normalizedDescription: description.trim().toLowerCase(),
+    bankCategory,
   }
 }
 
@@ -140,6 +144,15 @@ export function autoDetectMapping(headers: string[], sampleRows: ParsedRow[]): P
   for (let i = 0; i < lower.length; i++) {
     if (descKeywords.some((kw) => lower[i].includes(kw))) {
       mapping.description = headers[i]
+      break
+    }
+  }
+
+  // Detect category
+  const categoryKeywords = ['category', 'pfm', 'merchant category']
+  for (let i = 0; i < lower.length; i++) {
+    if (categoryKeywords.some((kw) => lower[i].includes(kw))) {
+      mapping.category = headers[i]
       break
     }
   }

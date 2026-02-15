@@ -242,6 +242,11 @@ export default function CategorizePage() {
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               {formatDate(currentTx.date)} &middot; {accountName} ({currentCurrency})
             </p>
+            {currentTx.bankCategory && (
+              <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
+                Bank: {currentTx.bankCategory}
+              </p>
+            )}
           </div>
           <p
             className={`text-xl font-bold font-mono ${

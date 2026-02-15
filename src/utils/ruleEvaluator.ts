@@ -18,6 +18,9 @@ export function evaluateCondition(transaction: Transaction, condition: RuleCondi
     case 'accountId':
       fieldValue = String(transaction.accountId)
       break
+    case 'bankCategory':
+      fieldValue = transaction.bankCategory?.toLowerCase() ?? ''
+      break
     default:
       return false
   }

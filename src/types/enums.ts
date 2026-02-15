@@ -15,4 +15,4 @@ export type RuleOperator =
   | 'less_than'
   | 'between'
 
-export type RuleField = 'description' | 'amount' | 'date' | 'accountId'
+export type RuleField = 'description' | 'amount' | 'date' | 'accountId' | 'bankCategory'

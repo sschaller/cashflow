@@ -126,6 +126,21 @@ export function ColumnMappingStep({
         </div>
       </div>
 
+      {/* Optional column mappings */}
+      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Bank Category
+          </label>
+          <select className={selectClass} value={columnMapping.category ?? ''} onChange={(e) => updateMapping('category', e.target.value)}>
+            <option value="">(none)</option>
+            {headers.map((h) => (
+              <option key={h} value={h}>{h}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {/* Amount mode toggle */}
       <div className="mb-6">
         <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Amount Format</label>
