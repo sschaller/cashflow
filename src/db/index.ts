@@ -121,7 +121,9 @@ export class FinanceDB extends Dexie {
     const tables = [this.accounts, this.transactions, this.categories, this.rules, this.importProfiles]
     for (const table of tables) {
       table.hook('creating', (_primKey, obj) => {
-        obj.updatedAt = new Date().toISOString()
+        if (!obj.updatedAt) {
+          obj.updatedAt = new Date().toISOString()
+        }
       })
       table.hook('updating', (modifications) => {
         if (!('updatedAt' in modifications)) {

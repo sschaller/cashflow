@@ -76,3 +76,4 @@ The sync file (`finance-sync.enc`) is stored encrypted in your Google Drive's hi
 ## TODO
 
 - [ ] Optimize category popularity query in `CategoryPicker` — currently iterates all transactions on every render via `useLiveQuery`; should run once on mount or use a pre-aggregated count
+- [ ] **Replace snapshot-based sync with operation-based sync using UUIDs.** The current sync merges full DB snapshots using auto-increment IDs and last-write-wins on `updatedAt`. This breaks when two devices independently create records (e.g. categories, rules) — they get colliding auto-increment IDs, and one silently overwrites the other on merge. Deletes and renames on one device can clobber unrelated records on another. Fix: switch to UUIDs for all primary keys and implement an operation log (create/update/delete ops with timestamps) so each mutation is synced individually rather than diffing entire table snapshots.
