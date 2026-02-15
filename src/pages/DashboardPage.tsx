@@ -5,13 +5,14 @@ import { DateRangeSelector } from '@/components/dashboard/DateRangeSelector.tsx'
 import { CategoryBreakdown } from '@/components/dashboard/CategoryBreakdown.tsx'
 import { useDashboardData } from '@/hooks/useDashboardData.ts'
 import { getDateRange } from '@/utils/dateUtils.ts'
+import { formatCurrencyOrPlain } from '@/utils/currencyUtils.ts'
 
 export default function DashboardPage() {
   const defaultRange = getDateRange('last-3-months')
   const [startDate, setStartDate] = useState(defaultRange.start)
   const [endDate, setEndDate] = useState(defaultRange.end)
 
-  const { summary, categoryBreakdown, loading } = useDashboardData(startDate, endDate)
+  const { summary, categoryBreakdown, loading, currency } = useDashboardData(startDate, endDate)
 
   if (loading) {
     return (
@@ -39,13 +40,13 @@ export default function DashboardPage() {
       </div>
 
       <div className="mb-6">
-        <SummaryCards summary={summary} />
+        <SummaryCards summary={summary} currency={currency} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Expense Breakdown</h2>
-          <CategoryBreakdown items={categoryBreakdown} />
+          <CategoryBreakdown items={categoryBreakdown} currency={currency} />
         </Card>
 
         <Card>
@@ -58,8 +59,8 @@ export default function DashboardPage() {
           ) : (
             <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
               <p>{summary.transactionCount} transactions in selected period</p>
-              <p>Income: ${summary.totalIncome.toFixed(2)}</p>
-              <p>Expenses: ${summary.totalExpenses.toFixed(2)}</p>
+              <p>Income: {formatCurrencyOrPlain(summary.totalIncome, currency)}</p>
+              <p>Expenses: {formatCurrencyOrPlain(summary.totalExpenses, currency)}</p>
               <p>Savings rate: {summary.totalIncome > 0 ? ((summary.netSavings / summary.totalIncome) * 100).toFixed(1) : 0}%</p>
             </div>
           )}

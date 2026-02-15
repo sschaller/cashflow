@@ -8,9 +8,10 @@ interface ImportPreviewProps {
   columnMapping: ColumnMapping
   dateFormat: string
   amountConfig: AmountConfig
+  currency?: string
 }
 
-export function ImportPreview({ parseResult, columnMapping, dateFormat, amountConfig }: ImportPreviewProps) {
+export function ImportPreview({ parseResult, columnMapping, dateFormat, amountConfig, currency = 'USD' }: ImportPreviewProps) {
   const previewRows = parseResult.rows.slice(0, 20).map((row, i) => ({
     index: i,
     raw: row,
@@ -49,7 +50,7 @@ export function ImportPreview({ parseResult, columnMapping, dateFormat, amountCo
                     <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{row.mapped.date}</td>
                     <td className="max-w-xs truncate px-3 py-2 text-gray-700 dark:text-gray-300">{row.mapped.description}</td>
                     <td className={`px-3 py-2 text-right font-mono ${row.mapped.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatCurrency(row.mapped.amount)}
+                      {formatCurrency(row.mapped.amount, currency)}
                     </td>
                     <td className="px-3 py-2">
                       <span className="inline-block rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700 dark:bg-green-900/30 dark:text-green-400">

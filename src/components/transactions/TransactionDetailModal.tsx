@@ -13,9 +13,10 @@ interface TransactionDetailModalProps {
   transaction: Transaction | null
   onClose: () => void
   categories: Category[]
+  currency?: string
 }
 
-export function TransactionDetailModal({ transaction, onClose, categories }: TransactionDetailModalProps) {
+export function TransactionDetailModal({ transaction, onClose, categories, currency = 'USD' }: TransactionDetailModalProps) {
   const repos = useRepositories()
   const [categoryId, setCategoryId] = useState<number | undefined>(undefined)
   const [notes, setNotes] = useState('')
@@ -102,7 +103,7 @@ export function TransactionDetailModal({ transaction, onClose, categories }: Tra
             <div>
               <span className="text-gray-500 dark:text-gray-400">Amount</span>
               <p className={`font-medium font-mono ${transaction.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {formatCurrency(transaction.amount)}
+                {formatCurrency(transaction.amount, currency)}
               </p>
             </div>
             <div className="col-span-2">

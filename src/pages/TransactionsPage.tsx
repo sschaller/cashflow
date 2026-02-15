@@ -1,25 +1,24 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useTransactions } from '@/hooks/useTransactions.ts'
 import { useCategories } from '@/hooks/useCategories.ts'
+import { useAccounts } from '@/hooks/useAccounts.ts'
+import { useCurrencyLookup } from '@/hooks/useCurrencyLookup.ts'
 import { useRepositories } from '@/repositories/RepositoryContext.tsx'
 import { TransactionTable } from '@/components/transactions/TransactionTable.tsx'
 import { TransactionFilters } from '@/components/transactions/TransactionFilters.tsx'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal.tsx'
 import { Button } from '@/components/ui/Button.tsx'
 import { recategorizeTransactions } from '@/services/categorizationEngine.ts'
-import type { Transaction, Account } from '@/types/models.ts'
+import type { Transaction } from '@/types/models.ts'
 import toast from 'react-hot-toast'
 
 export default function TransactionsPage() {
   const repos = useRepositories()
   const transactions = useTransactions()
   const categories = useCategories()
-  const [accounts, setAccounts] = useState<Account[]>([])
+  const accounts = useAccounts()
+  const currencyMap = useCurrencyLookup(accounts)
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null)
-
-  useEffect(() => {
-    repos.accounts.getAll().then(setAccounts)
-  }, [repos])
 
   const handleReRunRules = async () => {
     const rules = await repos.rules.getEnabled()
@@ -53,6 +52,7 @@ export default function TransactionsPage() {
       <TransactionTable
         transactions={transactions}
         categories={categories}
+        currencyMap={currencyMap}
         onSelect={setSelectedTx}
       />
 
@@ -60,6 +60,7 @@ export default function TransactionsPage() {
         transaction={selectedTx}
         onClose={() => setSelectedTx(null)}
         categories={categories}
+        currency={selectedTx ? (currencyMap.get(selectedTx.accountId) ?? 'USD') : undefined}
       />
     </div>
   )

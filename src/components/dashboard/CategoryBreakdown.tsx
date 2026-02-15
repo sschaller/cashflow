@@ -1,11 +1,12 @@
-import { formatCurrency } from '@/utils/currencyUtils.ts'
+import { formatCurrencyOrPlain } from '@/utils/currencyUtils.ts'
 import type { CategoryBreakdownItem } from '@/types/charts.ts'
 
 interface CategoryBreakdownProps {
   items: CategoryBreakdownItem[]
+  currency: string | null
 }
 
-export function CategoryBreakdown({ items }: CategoryBreakdownProps) {
+export function CategoryBreakdown({ items, currency }: CategoryBreakdownProps) {
   if (items.length === 0) {
     return <p className="text-sm text-gray-500 dark:text-gray-400">No expense data</p>
   }
@@ -21,7 +22,7 @@ export function CategoryBreakdown({ items }: CategoryBreakdownProps) {
               <span className="text-gray-400">({item.transactionCount})</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-medium text-gray-900 dark:text-white">{formatCurrency(item.amount)}</span>
+              <span className="font-medium text-gray-900 dark:text-white">{formatCurrencyOrPlain(item.amount, currency)}</span>
               <span className="text-gray-400">{item.percentage.toFixed(1)}%</span>
             </div>
           </div>

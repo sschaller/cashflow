@@ -261,6 +261,7 @@ export function ImportWizard() {
             columnMapping={columnMapping}
             dateFormat={dateFormat}
             amountConfig={amountConfig}
+            currency={accounts.find((a) => a.id === selectedAccountId)?.currency}
           />
         )}
 

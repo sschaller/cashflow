@@ -2,13 +2,14 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useUncategorizedTransactions } from '@/hooks/useUncategorizedTransactions.ts'
 import { useCategories } from '@/hooks/useCategories.ts'
+import { useAccounts } from '@/hooks/useAccounts.ts'
 import { useRepositories } from '@/repositories/RepositoryContext.tsx'
 import { CategoryPicker } from '@/components/categorize/CategoryPicker.tsx'
 import { RuleForm } from '@/components/categories/RuleForm.tsx'
 import { Button } from '@/components/ui/Button.tsx'
 import { formatDate } from '@/utils/dateUtils.ts'
-import { formatCurrency } from '@/utils/currencyUtils.ts'
-import type { Rule, Account } from '@/types/models.ts'
+import { formatCurrencyOrPlain } from '@/utils/currencyUtils.ts'
+import type { Rule } from '@/types/models.ts'
 import toast from 'react-hot-toast'
 
 interface UndoEntry {
@@ -21,7 +22,7 @@ export default function CategorizePage() {
   const repos = useRepositories()
   const uncategorized = useUncategorizedTransactions()
   const categories = useCategories()
-  const [accounts, setAccounts] = useState<Account[]>([])
+  const accounts = useAccounts()
   const [skippedIds, setSkippedIds] = useState<Set<number>>(new Set())
   const [undoStack, setUndoStack] = useState<UndoEntry[]>([])
   const [showRuleForm, setShowRuleForm] = useState(false)
@@ -35,17 +36,15 @@ export default function CategorizePage() {
   }
   const effectiveTotal = total ?? totalAtStart ?? uncategorized.length
 
-  useEffect(() => {
-    repos.accounts.getAll().then(setAccounts)
-  }, [repos])
-
   const currentTx = uncategorized.find((t) => !skippedIds.has(t.id!)) ?? null
   const categorizedCount = effectiveTotal - uncategorized.length
   const progressPct = effectiveTotal > 0 ? (categorizedCount / effectiveTotal) * 100 : 0
 
-  const accountName = currentTx
-    ? accounts.find((a) => a.id === currentTx.accountId)?.name ?? 'Unknown'
-    : ''
+  const currentAccount = currentTx
+    ? accounts.find((a) => a.id === currentTx.accountId)
+    : undefined
+  const accountName = currentAccount?.name ?? 'Unknown'
+  const currentCurrency = currentAccount?.currency ?? 'USD'
 
   // Leaf categories for keyboard shortcut ordering
   const parentIds = new Set(categories.filter((c) => c.parentId !== null).map((c) => c.parentId))
@@ -271,7 +270,7 @@ export default function CategorizePage() {
               {currentTx.description}
             </p>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              {formatDate(currentTx.date)} &middot; {accountName}
+              {formatDate(currentTx.date)} &middot; {accountName} ({currentCurrency})
             </p>
           </div>
           <p
@@ -279,7 +278,7 @@ export default function CategorizePage() {
               currentTx.amount >= 0 ? 'text-green-600' : 'text-red-600'
             }`}
           >
-            {formatCurrency(currentTx.amount)}
+            {formatCurrencyOrPlain(currentTx.amount, null)}
           </p>
         </div>
       </div>

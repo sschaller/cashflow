@@ -11,15 +11,17 @@ import {
 } from '@tanstack/react-table'
 import type { Transaction, Category } from '@/types/models.ts'
 import { formatDate } from '@/utils/dateUtils.ts'
-import { formatCurrency } from '@/utils/currencyUtils.ts'
+import { formatCurrency, formatCurrencyOrPlain } from '@/utils/currencyUtils.ts'
+import { getUniqueCurrency } from '@/hooks/useCurrencyLookup.ts'
 
 interface TransactionTableProps {
   transactions: Transaction[]
   categories: Category[]
+  currencyMap?: Map<number, string>
   onSelect?: (transaction: Transaction) => void
 }
 
-export function TransactionTable({ transactions, categories, onSelect }: TransactionTableProps) {
+export function TransactionTable({ transactions, categories, currencyMap, onSelect }: TransactionTableProps) {
   const [sorting, setSorting] = useState<SortingState>([{ id: 'date', desc: true }])
 
   const catMap = useMemo(() => {
@@ -28,24 +30,28 @@ export function TransactionTable({ transactions, categories, onSelect }: Transac
     return map
   }, [categories])
 
+  const uniqueCurrency = useMemo(
+    () => currencyMap ? getUniqueCurrency(transactions, currencyMap) : null,
+    [transactions, currencyMap]
+  )
+
   const columns = useMemo<ColumnDef<Transaction>[]>(
     () => [
       {
         accessorKey: 'date',
         header: 'Date',
         cell: (info) => formatDate(info.getValue<string>()),
-        size: 120,
+        meta: { shrink: true },
       },
       {
         accessorKey: 'description',
         header: 'Description',
-        cell: (info) => (
-          <span className="max-w-lg truncate block">{info.getValue<string>()}</span>
-        ),
+        cell: (info) => info.getValue<string>(),
       },
       {
         accessorKey: 'categoryId',
         header: 'Category',
+        meta: { shrink: true },
         cell: (info) => {
           const catId = info.getValue<number | undefined>()
           const cat = catId ? catMap.get(catId) : undefined
@@ -57,41 +63,30 @@ export function TransactionTable({ transactions, categories, onSelect }: Transac
             </span>
           )
         },
-        size: 150,
       },
       {
         accessorKey: 'amount',
-        header: 'Amount',
+        header: uniqueCurrency ? `Amount (${uniqueCurrency})` : 'Amount',
+        meta: { shrink: true },
         cell: (info) => {
           const amount = info.getValue<number>()
+          if (uniqueCurrency) {
+            return (
+              <span className={`font-mono ${amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {formatCurrencyOrPlain(amount, null)}
+              </span>
+            )
+          }
+          const currency = currencyMap?.get(info.row.original.accountId) ?? 'USD'
           return (
             <span className={`font-mono ${amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {formatCurrency(amount)}
+              {formatCurrency(amount, currency)}
             </span>
           )
         },
-        size: 120,
-      },
-      {
-        accessorKey: 'type',
-        header: 'Type',
-        cell: (info) => {
-          const type = info.getValue<string>()
-          const colors: Record<string, string> = {
-            income: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-            expense: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-            transfer: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
-          }
-          return (
-            <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${colors[type] ?? ''}`}>
-              {type}
-            </span>
-          )
-        },
-        size: 100,
       },
     ],
-    [catMap]
+    [catMap, currencyMap, uniqueCurrency]
   )
 
   const table = useReactTable({
@@ -113,11 +108,12 @@ export function TransactionTable({ transactions, categories, onSelect }: Transac
           <thead className="bg-gray-50 dark:bg-gray-900">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
+                {headerGroup.headers.map((header) => {
+                  const shrink = (header.column.columnDef.meta as Record<string, boolean> | undefined)?.shrink
+                  return (
                   <th
                     key={header.id}
-                    className="cursor-pointer select-none whitespace-nowrap px-4 py-3 font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
-                    style={{ width: header.getSize() }}
+                    className={`cursor-pointer select-none whitespace-nowrap px-4 py-3 font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 ${shrink ? 'w-0' : 'w-full'}`}
                     onClick={header.column.getToggleSortingHandler()}
                   >
                     <span className="flex items-center gap-1">
@@ -125,7 +121,8 @@ export function TransactionTable({ transactions, categories, onSelect }: Transac
                       {{ asc: ' \u2191', desc: ' \u2193' }[header.column.getIsSorted() as string] ?? ''}
                     </span>
                   </th>
-                ))}
+                  )
+                })}
               </tr>
             ))}
           </thead>
@@ -143,11 +140,14 @@ export function TransactionTable({ transactions, categories, onSelect }: Transac
                   className="border-t border-gray-100 transition-colors hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/50 cursor-pointer"
                   onClick={() => onSelect?.(row.original)}
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-4 py-3 text-gray-700 dark:text-gray-300">
+                  {row.getVisibleCells().map((cell) => {
+                    const shrink = (cell.column.columnDef.meta as Record<string, boolean> | undefined)?.shrink
+                    return (
+                    <td key={cell.id} className={`px-4 py-3 text-gray-700 dark:text-gray-300 ${shrink ? 'whitespace-nowrap' : 'max-w-0 truncate'}`}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
-                  ))}
+                    )
+                  })}
                 </tr>
               ))
             )}
