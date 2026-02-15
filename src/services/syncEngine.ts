@@ -1,6 +1,6 @@
 import { db } from '@/db/index.ts'
 import type { RepositoryProvider } from '@/repositories/interfaces.ts'
-import type { Transaction } from '@/types/models.ts'
+import type { Category, Transaction, Rule } from '@/types/models.ts'
 import type { SyncSnapshot } from '@/types/sync.ts'
 import type { EncryptedPayload } from '@/services/crypto.ts'
 import { encrypt, decrypt, toBase64, fromBase64 } from '@/services/crypto.ts'
@@ -91,15 +91,80 @@ function mergeTransactions(local: Transaction[], remote: Transaction[]): Transac
   return Array.from(byId.values()).filter(r => !r._deleted)
 }
 
+function mergeCategories(
+  local: Category[],
+  remote: Category[],
+): { categories: Category[]; idRemap: Map<number, number> } {
+  // Standard ID-based merge first
+  const allMerged = mergeTable(local, remote) as Category[]
+  const idRemap = new Map<number, number>()
+
+  // Deduplicate top-level categories by name
+  const topLevel = allMerged.filter(c => c.parentId === null)
+  const subLevel = allMerged.filter(c => c.parentId !== null)
+
+  const dedupedTop = deduplicateCategories(topLevel, c => c.name, idRemap)
+
+  // Remap parentIds in subcategories, then deduplicate by (name, remapped parentId)
+  const remappedSubs = subLevel.map(c => ({
+    ...c,
+    parentId: idRemap.get(c.parentId!) ?? c.parentId,
+  }))
+  const dedupedSubs = deduplicateCategories(remappedSubs, c => `${c.parentId}:${c.name}`, idRemap)
+
+  return { categories: [...dedupedTop, ...dedupedSubs], idRemap }
+}
+
+function deduplicateCategories(
+  items: Category[],
+  keyFn: (c: Category) => string,
+  idRemap: Map<number, number>,
+): Category[] {
+  const byKey = new Map<string, Category>()
+
+  for (const item of items) {
+    const key = keyFn(item)
+    const existing = byKey.get(key)
+    if (!existing) {
+      byKey.set(key, item)
+    } else {
+      // Keep the lower ID (more canonical); remap the duplicate
+      const [keep, discard] = existing.id! < item.id! ? [existing, item] : [item, existing]
+      byKey.set(key, keep)
+      idRemap.set(discard.id!, keep.id!)
+    }
+  }
+
+  return Array.from(byKey.values())
+}
+
 export function mergeSnapshots(local: SyncSnapshot, remote: SyncSnapshot): SyncSnapshot {
+  const { categories, idRemap } = mergeCategories(local.categories, remote.categories)
+  const transactions = mergeTransactions(local.transactions, remote.transactions)
+  const rules = mergeTable(local.rules, remote.rules) as Rule[]
+
+  // Remap categoryId references for deduplicated categories
+  if (idRemap.size > 0) {
+    for (const t of transactions) {
+      if (t.categoryId != null && idRemap.has(t.categoryId)) {
+        t.categoryId = idRemap.get(t.categoryId)
+      }
+    }
+    for (const r of rules) {
+      if (r.categoryId != null && idRemap.has(r.categoryId)) {
+        r.categoryId = idRemap.get(r.categoryId)!
+      }
+    }
+  }
+
   return {
     version: 1,
     syncVersion: Math.max(local.syncVersion, remote.syncVersion) + 1,
     timestamp: new Date().toISOString(),
     accounts: mergeTable(local.accounts, remote.accounts),
-    transactions: mergeTransactions(local.transactions, remote.transactions),
-    categories: mergeTable(local.categories, remote.categories),
-    rules: mergeTable(local.rules, remote.rules),
+    transactions,
+    categories,
+    rules,
     importProfiles: mergeTable(local.importProfiles, remote.importProfiles),
   }
 }
