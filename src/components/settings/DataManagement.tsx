@@ -1,5 +1,4 @@
 import { useRef } from 'react'
-import { useRepositories } from '@/repositories/RepositoryContext.tsx'
 import { Button } from '@/components/ui/Button.tsx'
 import { exportAllData, downloadJSON } from '@/services/exportService.ts'
 import { db } from '@/db/index.ts'
@@ -9,11 +8,10 @@ import type { Account, Transaction, Category, Rule, ImportProfile } from '@/type
 import toast from 'react-hot-toast'
 
 export function DataManagement() {
-  const repos = useRepositories()
   const fileRef = useRef<HTMLInputElement>(null)
 
   const handleExport = async () => {
-    const data = await exportAllData(repos)
+    const data = await exportAllData()
     const date = new Date().toISOString().split('T')[0]
     downloadJSON(data, `finance-backup-${date}.json`)
     toast.success('Backup exported')

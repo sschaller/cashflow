@@ -4,7 +4,7 @@ import type { ICategoryRepository } from '@/repositories/interfaces.ts'
 
 export class DexieCategoryRepository implements ICategoryRepository {
   async getAll(): Promise<Category[]> {
-    return db.categories.orderBy('sortOrder').toArray()
+    return db.categories.orderBy('sortOrder').filter(c => !c._deleted).toArray()
   }
 
   async getById(id: number): Promise<Category | undefined> {
@@ -24,21 +24,21 @@ export class DexieCategoryRepository implements ICategoryRepository {
   }
 
   async delete(id: number): Promise<void> {
-    await db.categories.delete(id)
+    await db.categories.update(id, { _deleted: true })
   }
 
   async count(): Promise<number> {
-    return db.categories.count()
+    return db.categories.filter(c => !c._deleted).count()
   }
 
   async getTopLevel(): Promise<Category[]> {
     return db.categories.where('parentId').equals(0).or('parentId').equals('').toArray()
       .then(results => {
         // Also get items where parentId is null (stored as 0 in IndexedDB)
-        return db.categories.filter(c => c.parentId === null).toArray()
+        return db.categories.filter(c => c.parentId === null && !c._deleted).toArray()
           .then(nullParents => {
             const ids = new Set(results.map(r => r.id))
-            const combined = [...results]
+            const combined = [...results].filter(c => !c._deleted)
             for (const item of nullParents) {
               if (!ids.has(item.id)) combined.push(item)
             }
@@ -48,10 +48,10 @@ export class DexieCategoryRepository implements ICategoryRepository {
   }
 
   async getChildren(parentId: number): Promise<Category[]> {
-    return db.categories.where('parentId').equals(parentId).sortBy('sortOrder')
+    return db.categories.where('parentId').equals(parentId).filter(c => !c._deleted).sortBy('sortOrder')
   }
 
   async getAllWithHierarchy(): Promise<Category[]> {
-    return db.categories.orderBy('sortOrder').toArray()
+    return db.categories.orderBy('sortOrder').filter(c => !c._deleted).toArray()
   }
 }

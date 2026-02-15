@@ -3,7 +3,6 @@ import type { SyncStatus } from '@/types/sync.ts'
 import { generateSalt, deriveKey, decryptPayload, type EncryptedPayload } from '@/services/crypto.ts'
 import { GoogleDriveClient, DriveApiError } from '@/services/googleDrive.ts'
 import { performSync } from '@/services/syncEngine.ts'
-import { getProvider } from '@/repositories/provider.ts'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
 const SCOPES = 'https://www.googleapis.com/auth/drive.appdata'
@@ -231,11 +230,9 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     set({ status: 'syncing', lastError: null })
 
     try {
-      const repos = getProvider()
       const drive = new GoogleDriveClient(async () => get().accessToken!)
 
       const { newSyncVersion } = await performSync(
-        repos,
         drive,
         state.cryptoKey,
         state.salt,

@@ -1,5 +1,4 @@
 import { db } from '@/db/index.ts'
-import type { RepositoryProvider } from '@/repositories/interfaces.ts'
 import type { Transaction } from '@/types/models.ts'
 import type { SyncSnapshot } from '@/types/sync.ts'
 import type { EncryptedPayload } from '@/services/crypto.ts'
@@ -8,13 +7,14 @@ import type { GoogleDriveClient } from '@/services/googleDrive.ts'
 
 // --- Snapshot creation ---
 
-export async function createSnapshot(repos: RepositoryProvider, syncVersion: number): Promise<SyncSnapshot> {
+export async function createSnapshot(syncVersion: number): Promise<SyncSnapshot> {
+  // Read directly from DB (not repos) so soft-deleted records are included as tombstones
   const [accounts, transactions, categories, rules, importProfiles] = await Promise.all([
-    repos.accounts.getAll(),
-    repos.transactions.getAll(),
-    repos.categories.getAll(),
-    repos.rules.getAll(),
-    repos.importProfiles.getAll(),
+    db.accounts.toArray(),
+    db.transactions.toArray(),
+    db.categories.toArray(),
+    db.rules.toArray(),
+    db.importProfiles.toArray(),
   ])
 
   return {
@@ -55,7 +55,7 @@ function mergeTable<T extends Mergeable>(local: T[], remote: T[]): T[] {
     }
   }
 
-  return Array.from(merged.values()).filter(r => !r._deleted)
+  return Array.from(merged.values())
 }
 
 function mergeTransactions(local: Transaction[], remote: Transaction[]): Transaction[] {
@@ -88,7 +88,7 @@ function mergeTransactions(local: Transaction[], remote: Transaction[]): Transac
     }
   }
 
-  return Array.from(byId.values()).filter(r => !r._deleted)
+  return Array.from(byId.values())
 }
 
 export function mergeSnapshots(local: SyncSnapshot, remote: SyncSnapshot): SyncSnapshot {
@@ -129,14 +129,13 @@ export async function applySnapshot(snapshot: SyncSnapshot): Promise<void> {
 // --- Orchestrated sync ---
 
 export async function performSync(
-  repos: RepositoryProvider,
   drive: GoogleDriveClient,
   cryptoKey: CryptoKey,
   salt: Uint8Array,
   currentSyncVersion: number,
 ): Promise<{ newSyncVersion: number }> {
   // 1. Create local snapshot
-  const localSnapshot = await createSnapshot(repos, currentSyncVersion)
+  const localSnapshot = await createSnapshot(currentSyncVersion)
 
   // 2. Try to download remote snapshot
   const fileId = await drive.findSyncFile()

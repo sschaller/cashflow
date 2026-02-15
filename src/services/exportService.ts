@@ -1,4 +1,4 @@
-import type { RepositoryProvider } from '@/repositories/interfaces.ts'
+import { db } from '@/db/index.ts'
 
 export interface ExportData {
   version: 1
@@ -10,13 +10,14 @@ export interface ExportData {
   importProfiles: unknown[]
 }
 
-export async function exportAllData(repos: RepositoryProvider): Promise<ExportData> {
+export async function exportAllData(): Promise<ExportData> {
+  // Read directly from DB so soft-deleted records (tombstones) are included
   const [accounts, transactions, categories, rules, importProfiles] = await Promise.all([
-    repos.accounts.getAll(),
-    repos.transactions.getAll(),
-    repos.categories.getAll(),
-    repos.rules.getAll(),
-    repos.importProfiles.getAll(),
+    db.accounts.toArray(),
+    db.transactions.toArray(),
+    db.categories.toArray(),
+    db.rules.toArray(),
+    db.importProfiles.toArray(),
   ])
 
   return {
