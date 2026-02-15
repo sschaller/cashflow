@@ -8,7 +8,7 @@ import { TransactionTable } from '@/components/transactions/TransactionTable.tsx
 import { TransactionFilters } from '@/components/transactions/TransactionFilters.tsx'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal.tsx'
 import { Button } from '@/components/ui/Button.tsx'
-import { recategorizeTransactions } from '@/services/categorizationEngine.ts'
+import { rerunRules } from '@/services/categorizationEngine.ts'
 import type { Transaction } from '@/types/models.ts'
 import toast from 'react-hot-toast'
 
@@ -21,15 +21,7 @@ export default function TransactionsPage() {
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null)
 
   const handleReRunRules = async () => {
-    const rules = await repos.rules.getEnabled()
-    const updates = recategorizeTransactions(transactions, rules)
-
-    let count = 0
-    for (const [id, categoryId] of updates) {
-      await repos.transactions.update(id, { categoryId })
-      count++
-    }
-
+    const count = await rerunRules(repos)
     toast.success(`Updated ${count} transactions`)
   }
 

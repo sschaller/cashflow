@@ -5,7 +5,7 @@ import { RuleForm } from '@/components/categories/RuleForm.tsx'
 import { useRepositories } from '@/repositories/RepositoryContext.tsx'
 import { formatDate } from '@/utils/dateUtils.ts'
 import { formatCurrency } from '@/utils/currencyUtils.ts'
-import { categorizeTransaction } from '@/services/categorizationEngine.ts'
+import { categorizeTransaction, rerunRules } from '@/services/categorizationEngine.ts'
 import type { Transaction, Category, Rule } from '@/types/models.ts'
 import toast from 'react-hot-toast'
 
@@ -55,6 +55,10 @@ export function TransactionDetailModal({ transaction, onClose, categories, curre
   const handleSaveRule = async (rule: Omit<Rule, 'id'>) => {
     await repos.rules.add(rule)
     toast.success('Rule created')
+    const count = await rerunRules(repos)
+    if (count > 0) {
+      toast.success(`Re-categorized ${count} transaction${count === 1 ? '' : 's'}`)
+    }
     setShowRuleForm(false)
   }
 

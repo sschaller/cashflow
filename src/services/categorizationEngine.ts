@@ -1,4 +1,5 @@
 import type { Transaction, Rule } from '@/types/models.ts'
+import type { RepositoryProvider } from '@/repositories/interfaces.ts'
 import { evaluateRule } from '@/utils/ruleEvaluator.ts'
 
 /**
@@ -46,4 +47,24 @@ export function recategorizeTransactions(
   }
 
   return updates
+}
+
+/**
+ * Fetch all transactions and enabled rules, then re-categorize.
+ * Skips manually categorized transactions and respects rule priority.
+ * Returns the number of updated transactions.
+ */
+export async function rerunRules(repos: RepositoryProvider): Promise<number> {
+  const [transactions, rules] = await Promise.all([
+    repos.transactions.getAll(),
+    repos.rules.getEnabled(),
+  ])
+
+  const updates = recategorizeTransactions(transactions, rules)
+
+  for (const [id, categoryId] of updates) {
+    await repos.transactions.update(id, { categoryId })
+  }
+
+  return updates.size
 }

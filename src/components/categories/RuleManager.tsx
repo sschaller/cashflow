@@ -3,6 +3,7 @@ import { useRepositories } from '@/repositories/RepositoryContext.tsx'
 import { Button } from '@/components/ui/Button.tsx'
 import { Modal } from '@/components/ui/Modal.tsx'
 import { RuleForm } from './RuleForm.tsx'
+import { rerunRules } from '@/services/categorizationEngine.ts'
 import type { Rule, Category } from '@/types/models.ts'
 import toast from 'react-hot-toast'
 
@@ -30,6 +31,10 @@ export function RuleManager() {
     } else {
       await repos.rules.add(data)
       toast.success('Rule created')
+    }
+    const count = await rerunRules(repos)
+    if (count > 0) {
+      toast.success(`Re-categorized ${count} transaction${count === 1 ? '' : 's'}`)
     }
     setShowForm(false)
     setEditingRule(undefined)
