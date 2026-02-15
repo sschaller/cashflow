@@ -9,6 +9,7 @@ interface SankeyDiagramProps {
   transactions: Transaction[]
   categories: Category[]
   currency: string | null
+  bare?: boolean
 }
 
 interface SNode {
@@ -22,7 +23,7 @@ interface SLink {
   value: number
 }
 
-export function SankeyDiagram({ transactions, categories, currency }: SankeyDiagramProps) {
+export function SankeyDiagram({ transactions, categories, currency, bare }: SankeyDiagramProps) {
   const svgRef = useRef<SVGSVGElement>(null)
 
   const catMap = useMemo(() => {
@@ -177,7 +178,7 @@ export function SankeyDiagram({ transactions, categories, currency }: SankeyDiag
   }, [nodes, links, isEmpty, currency])
 
   return (
-    <ChartContainer title="Money Flow (Sankey)" empty={isEmpty}>
+    <ChartContainer title="Money Flow (Sankey)" empty={isEmpty} bare={bare}>
       <div className="overflow-x-auto">
         <svg ref={svgRef} className="w-full" style={{ minHeight: 400 }} />
       </div>

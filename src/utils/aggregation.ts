@@ -1,6 +1,6 @@
 import { format, parseISO } from 'date-fns'
 import type { Transaction, Category } from '@/types/models.ts'
-import type { CategoryBreakdownItem, MonthlyTotal, DashboardSummary } from '@/types/charts.ts'
+import type { CategoryBreakdownItem, MonthlyTotal, MonthlyCategoryTotal, DashboardSummary } from '@/types/charts.ts'
 
 export function sumByCategory(
   transactions: Transaction[],
@@ -53,6 +53,64 @@ export function monthlyTotals(transactions: Transaction[]): MonthlyTotal[] {
   }
 
   return Array.from(months.values()).sort((a, b) => a.month.localeCompare(b.month))
+}
+
+export function monthlyCategoryTotals(
+  transactions: Transaction[],
+  categories: Category[]
+): MonthlyCategoryTotal[] {
+  const catMap = new Map<number, Category>()
+  for (const c of categories) catMap.set(c.id!, c)
+
+  const expenses = transactions.filter((t) => t.amount < 0)
+
+  // Aggregate by month+category
+  const monthCatMap = new Map<string, Map<number, number>>()
+  for (const tx of expenses) {
+    const month = format(parseISO(tx.date), 'yyyy-MM')
+    const catId = tx.categoryId ?? 0
+    if (!monthCatMap.has(month)) monthCatMap.set(month, new Map())
+    const cats = monthCatMap.get(month)!
+    cats.set(catId, (cats.get(catId) ?? 0) + Math.abs(tx.amount))
+  }
+
+  // Determine top 8 categories by total amount across all months
+  const catTotals = new Map<number, number>()
+  for (const cats of monthCatMap.values()) {
+    for (const [catId, amount] of cats) {
+      catTotals.set(catId, (catTotals.get(catId) ?? 0) + amount)
+    }
+  }
+  const sortedCats = Array.from(catTotals.entries()).sort((a, b) => b[1] - a[1])
+  const topCatIds = new Set(sortedCats.slice(0, 8).map(([id]) => id))
+
+  return Array.from(monthCatMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([month, cats]) => {
+      const catEntries: MonthlyCategoryTotal['categories'] = []
+      let otherAmount = 0
+
+      for (const [catId, amount] of cats) {
+        if (topCatIds.has(catId)) {
+          const cat = catMap.get(catId)
+          catEntries.push({
+            categoryId: catId,
+            categoryName: cat?.name ?? 'Uncategorized',
+            color: cat?.color ?? '#BDBDBD',
+            amount,
+          })
+        } else {
+          otherAmount += amount
+        }
+      }
+
+      if (otherAmount > 0) {
+        catEntries.push({ categoryId: -1, categoryName: 'Other', color: '#9E9E9E', amount: otherAmount })
+      }
+
+      catEntries.sort((a, b) => b.amount - a.amount)
+      return { month, categories: catEntries }
+    })
 }
 
 export function computeDashboardSummary(

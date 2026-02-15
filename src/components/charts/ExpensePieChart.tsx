@@ -10,9 +10,10 @@ interface ExpensePieChartProps {
   data: CategoryBreakdownItem[]
   currency: string | null
   onCategoryClick?: (categoryId: number) => void
+  bare?: boolean
 }
 
-export function ExpensePieChart({ data, currency, onCategoryClick }: ExpensePieChartProps) {
+export function ExpensePieChart({ data, currency, onCategoryClick, bare }: ExpensePieChartProps) {
   const chartData = {
     labels: data.map((d) => d.categoryName),
     datasets: [
@@ -58,7 +59,7 @@ export function ExpensePieChart({ data, currency, onCategoryClick }: ExpensePieC
   }
 
   return (
-    <ChartContainer title="Expenses by Category" empty={data.length === 0}>
+    <ChartContainer title="Expenses by Category" empty={data.length === 0} bare={bare}>
       <div className="h-80">
         <Doughnut data={chartData} options={options} />
       </div>

@@ -17,9 +17,10 @@ interface CategoryComparisonBarProps {
   data: CategoryBreakdownItem[]
   currency: string | null
   onCategoryClick?: (categoryId: number) => void
+  bare?: boolean
 }
 
-export function CategoryComparisonBar({ data, currency, onCategoryClick }: CategoryComparisonBarProps) {
+export function CategoryComparisonBar({ data, currency, onCategoryClick, bare }: CategoryComparisonBarProps) {
   const top10 = data.slice(0, 10)
 
   const chartData = {
@@ -67,7 +68,7 @@ export function CategoryComparisonBar({ data, currency, onCategoryClick }: Categ
   }
 
   return (
-    <ChartContainer title="Category Comparison" empty={top10.length === 0}>
+    <ChartContainer title="Category Comparison" empty={top10.length === 0} bare={bare}>
       <div style={{ height: Math.max(200, top10.length * 40) }}>
         <Bar data={chartData} options={options} />
       </div>

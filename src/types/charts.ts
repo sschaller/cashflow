@@ -30,6 +30,11 @@ export interface SankeyData {
   links: SankeyLink[]
 }
 
+export interface MonthlyCategoryTotal {
+  month: string
+  categories: { categoryId: number; categoryName: string; color: string; amount: number }[]
+}
+
 export interface DashboardSummary {
   totalIncome: number
   totalExpenses: number

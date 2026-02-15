@@ -18,9 +18,11 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 interface IncomeExpenseBarProps {
   data: MonthlyTotal[]
   currency: string | null
+  onMonthClick?: (month: string) => void
+  bare?: boolean
 }
 
-export function IncomeExpenseBar({ data, currency }: IncomeExpenseBarProps) {
+export function IncomeExpenseBar({ data, currency, onMonthClick, bare }: IncomeExpenseBarProps) {
   const chartData = {
     labels: data.map((d) => format(parseISO(d.month + '-01'), 'MMM yyyy')),
     datasets: [
@@ -66,10 +68,15 @@ export function IncomeExpenseBar({ data, currency }: IncomeExpenseBarProps) {
         },
       },
     },
+    onClick: (_event: unknown, elements: Array<{ index: number }>) => {
+      if (elements.length > 0 && onMonthClick) {
+        onMonthClick(data[elements[0].index].month)
+      }
+    },
   }
 
   return (
-    <ChartContainer title="Income vs Expenses" empty={data.length === 0}>
+    <ChartContainer title="Income vs Expenses" empty={data.length === 0} bare={bare}>
       <div className="h-80">
         <Bar data={chartData} options={options} />
       </div>
