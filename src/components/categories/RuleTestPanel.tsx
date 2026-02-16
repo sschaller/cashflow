@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useRepositories } from '@/repositories/RepositoryContext.tsx'
 import { Button } from '@/components/ui/Button.tsx'
-import { categorizeTransaction } from '@/services/categorizationEngine.ts'
+import { applyRules } from '@/services/categorizationEngine.ts'
 import type { Transaction, Rule, Category } from '@/types/models.ts'
 
 export function RuleTestPanel() {
   const repos = useRepositories()
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('-50')
-  const [result, setResult] = useState<{ categoryName: string; ruleName: string } | null>(null)
+  const [result, setResult] = useState<{ categoryName?: string; ruleName?: string; displayDescription?: string } | null>(null)
   const [rules, setRules] = useState<Rule[]>([])
   const [categories, setCategories] = useState<Category[]>([])
 
@@ -34,13 +34,12 @@ export function RuleTestPanel() {
       importedAt: new Date().toISOString(),
     }
 
-    const categoryId = categorizeTransaction(testTx, rules)
-    if (categoryId !== null) {
-      const category = categories.find((c) => c.id === categoryId)
-      const matchedRule = rules.find((r) => r.categoryId === categoryId)
+    const ruleResult = applyRules(testTx, rules)
+    if (ruleResult.categoryId !== undefined || ruleResult.displayDescription) {
+      const category = ruleResult.categoryId !== undefined ? categories.find((c) => c.id === ruleResult.categoryId) : undefined
       setResult({
-        categoryName: category?.name ?? 'Unknown',
-        ruleName: matchedRule?.name ?? 'Unknown rule',
+        categoryName: category?.name,
+        displayDescription: ruleResult.displayDescription,
       })
     } else {
       setResult(null)
@@ -76,8 +75,14 @@ export function RuleTestPanel() {
 
         {result !== null ? (
           <div className="rounded-lg bg-green-50 p-3 text-sm dark:bg-green-900/20">
-            <span className="font-medium text-green-700 dark:text-green-400">Match: {result.categoryName}</span>
-            <span className="ml-2 text-green-600 dark:text-green-500">(rule: {result.ruleName})</span>
+            {result.categoryName && (
+              <span className="font-medium text-green-700 dark:text-green-400">Category: {result.categoryName}</span>
+            )}
+            {result.displayDescription && (
+              <span className={`font-medium text-green-700 dark:text-green-400 ${result.categoryName ? 'ml-3' : ''}`}>
+                Display: "{result.displayDescription}"
+              </span>
+            )}
           </div>
         ) : result === null && description ? (
           <div className="rounded-lg bg-yellow-50 p-3 text-sm text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400">

@@ -5,7 +5,7 @@ import { RuleForm } from '@/components/categories/RuleForm.tsx'
 import { useRepositories } from '@/repositories/RepositoryContext.tsx'
 import { formatDate } from '@/utils/dateUtils.ts'
 import { formatCurrency } from '@/utils/currencyUtils.ts'
-import { categorizeTransaction, rerunRules } from '@/services/categorizationEngine.ts'
+import { applyRules, categorizeTransaction, rerunRules } from '@/services/categorizationEngine.ts'
 import type { Transaction, Category, Rule } from '@/types/models.ts'
 import toast from 'react-hot-toast'
 
@@ -19,6 +19,7 @@ interface TransactionDetailModalProps {
 export function TransactionDetailModal({ transaction, onClose, categories, currency = 'USD' }: TransactionDetailModalProps) {
   const repos = useRepositories()
   const [categoryId, setCategoryId] = useState<number | undefined>(undefined)
+  const [displayDescription, setDisplayDescription] = useState('')
   const [notes, setNotes] = useState('')
   const [tags, setTags] = useState('')
   const [showRuleForm, setShowRuleForm] = useState(false)
@@ -26,6 +27,7 @@ export function TransactionDetailModal({ transaction, onClose, categories, curre
   useEffect(() => {
     if (transaction) {
       setCategoryId(transaction.categoryId)
+      setDisplayDescription(transaction.displayDescription ?? '')
       setNotes(transaction.notes)
       setTags(transaction.tags.join(', '))
       setShowRuleForm(false)
@@ -36,11 +38,16 @@ export function TransactionDetailModal({ transaction, onClose, categories, curre
 
   const handleSave = async () => {
     const isManualCategory = categoryId !== transaction.categoryId
+    const newDisplayDesc = displayDescription.trim() || undefined
+    const isManualDescription = newDisplayDesc !== transaction.displayDescription
+
     await repos.transactions.update(transaction.id!, {
       categoryId,
+      displayDescription: newDisplayDesc,
       notes,
       tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
       isManualCategory: isManualCategory || transaction.isManualCategory,
+      isManualDescription: isManualDescription || transaction.isManualDescription || false,
     })
     toast.success('Transaction updated')
     onClose()
@@ -110,15 +117,51 @@ export function TransactionDetailModal({ transaction, onClose, categories, curre
                 {formatCurrency(transaction.amount, currency)}
               </p>
             </div>
-            <div className="col-span-2">
-              <span className="text-gray-500 dark:text-gray-400">Description</span>
-              <p className="font-medium text-gray-900 dark:text-white">{transaction.description}</p>
-            </div>
+            {transaction.displayDescription && (
+              <div className="col-span-2">
+                <span className="text-gray-500 dark:text-gray-400">Original Description</span>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{transaction.description}</p>
+              </div>
+            )}
             {transaction.bankCategory && (
               <div className="col-span-2">
                 <span className="text-gray-500 dark:text-gray-400">Bank Category</span>
                 <p className="font-medium text-gray-900 dark:text-white">{transaction.bankCategory}</p>
               </div>
+            )}
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
+            <input
+              className={selectClass}
+              value={displayDescription}
+              onChange={(e) => setDisplayDescription(e.target.value)}
+              placeholder={transaction.description}
+            />
+            {transaction.isManualDescription && (
+              <p className="mt-1 flex items-center gap-2 text-xs text-blue-500">
+                Manually set (won't be overwritten by rules)
+                <button
+                  type="button"
+                  className="underline hover:text-blue-700 dark:hover:text-blue-300"
+                  onClick={async () => {
+                    const rules = await repos.rules.getEnabled()
+                    const result = applyRules(
+                      { ...transaction, isManualDescription: false, displayDescription: undefined },
+                      rules
+                    )
+                    await repos.transactions.update(transaction.id!, {
+                      isManualDescription: false,
+                      displayDescription: result.displayDescription,
+                    })
+                    toast.success('Reset to auto description')
+                    onClose()
+                  }}
+                >
+                  Reset to auto
+                </button>
+              </p>
             )}
           </div>
 

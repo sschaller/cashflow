@@ -19,6 +19,7 @@ export interface Transaction {
   amount: number
   description: string
   normalizedDescription: string
+  displayDescription?: string
   accountId: number
   categoryId?: number
   type: TransactionType
@@ -27,6 +28,7 @@ export interface Transaction {
   bankCategory?: string
   hash: string
   isManualCategory: boolean
+  isManualDescription?: boolean
   importProfileId?: number
   importedAt: string
   updatedAt?: string
@@ -58,7 +60,8 @@ export interface Rule {
   id?: number
   name: string
   conditions: RuleCondition[]
-  categoryId: number
+  categoryId?: number
+  displayDescription?: string
   priority: number
   isEnabled: boolean
   updatedAt?: string

@@ -71,7 +71,10 @@ export class DexieTransactionRepository implements ITransactionRepository {
     }
     if (filters.search) {
       const search = filters.search.toLowerCase()
-      results = results.filter(t => t.normalizedDescription.includes(search))
+      results = results.filter(t =>
+        t.normalizedDescription.includes(search) ||
+        (t.displayDescription && t.displayDescription.toLowerCase().includes(search))
+      )
     }
     if (filters.minAmount !== undefined) {
       results = results.filter(t => Math.abs(t.amount) >= filters.minAmount!)

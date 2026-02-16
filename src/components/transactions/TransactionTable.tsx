@@ -46,7 +46,7 @@ export function TransactionTable({ transactions, categories, currencyMap, onSele
       {
         accessorKey: 'description',
         header: 'Description',
-        cell: (info) => info.getValue<string>(),
+        cell: (info) => info.row.original.displayDescription ?? info.getValue<string>(),
       },
       {
         accessorKey: 'categoryId',

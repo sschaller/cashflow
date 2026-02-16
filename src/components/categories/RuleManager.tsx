@@ -104,7 +104,8 @@ export function RuleManager() {
                       {c.valueTo ? ` to "${c.valueTo}"` : ''}
                     </span>
                   ))}
-                  {' → '}{getCategoryName(rule.categoryId)}
+                  {rule.categoryId !== undefined && <>{' → '}{getCategoryName(rule.categoryId)}</>}
+                  {rule.displayDescription && <>{' → '}<span className="italic">"{rule.displayDescription}"</span></>}
                 </div>
               </div>
 

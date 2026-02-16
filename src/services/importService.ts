@@ -3,7 +3,7 @@ import type { RepositoryProvider } from '@/repositories/interfaces.ts'
 import type { ParseResult } from '@/parsers/types.ts'
 import { mapRow } from '@/parsers/columnMapper.ts'
 import { computeHash } from '@/utils/fileHelpers.ts'
-import { categorizeTransaction } from './categorizationEngine.ts'
+import { applyRules } from './categorizationEngine.ts'
 
 export interface ImportOptions {
   accountId: number
@@ -70,15 +70,16 @@ export async function importTransactions(
         importedAt: now,
       } as Transaction
 
-      const categoryId = categorizeTransaction(tempTransaction, rules)
+      const ruleResult = applyRules(tempTransaction, rules)
 
       transactionsToAdd.push({
         date: mapped.date,
         amount: mapped.amount,
         description: mapped.description,
         normalizedDescription: mapped.normalizedDescription,
+        displayDescription: ruleResult.displayDescription,
         accountId: options.accountId,
-        categoryId: categoryId ?? undefined,
+        categoryId: ruleResult.categoryId,
         type,
         tags: [],
         notes: '',

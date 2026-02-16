@@ -61,3 +61,20 @@ export function evaluateRule(transaction: Transaction, rule: Rule): boolean {
   if (!rule.isEnabled || rule.conditions.length === 0) return false
   return rule.conditions.every((condition) => evaluateCondition(transaction, condition))
 }
+
+/**
+ * Extract regex capture groups from the first description regex condition that matches.
+ * Returns the match array (with $0 as full match, $1, $2, etc.) or null if no regex condition matched.
+ */
+export function extractRegexCaptures(transaction: Transaction, rule: Rule): RegExpMatchArray | null {
+  for (const condition of rule.conditions) {
+    if (condition.field !== 'description' || condition.operator !== 'regex') continue
+    try {
+      const match = transaction.normalizedDescription.match(new RegExp(condition.value, 'i'))
+      if (match) return match
+    } catch {
+      // invalid regex
+    }
+  }
+  return null
+}

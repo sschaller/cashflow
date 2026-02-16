@@ -117,6 +117,15 @@ export class FinanceDB extends Dexie {
       await tx.table('categories').bulkDelete(toDelete)
     })
 
+    // Version 4: add displayDescription to transactions and rules (no index changes needed)
+    this.version(4).stores({
+      accounts: '++id, name, type, isActive, updatedAt',
+      transactions: '++id, [accountId+date], [categoryId+date], hash, date, type, accountId, categoryId, updatedAt',
+      categories: '++id, parentId, name, sortOrder, updatedAt',
+      rules: '++id, categoryId, priority, isEnabled, updatedAt',
+      importProfiles: '++id, name, accountId, updatedAt',
+    })
+
     // Auto-set updatedAt on every write
     const tables = [this.accounts, this.transactions, this.categories, this.rules, this.importProfiles]
     for (const table of tables) {

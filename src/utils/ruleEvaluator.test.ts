@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { evaluateCondition, evaluateRule } from './ruleEvaluator.ts'
+import { evaluateCondition, evaluateRule, extractRegexCaptures } from './ruleEvaluator.ts'
 import type { Transaction, Rule, RuleCondition } from '@/types/models.ts'
 
 function makeTx(overrides: Partial<Transaction> = {}): Transaction {
@@ -129,5 +129,43 @@ describe('evaluateRule', () => {
     const tx = makeTx()
     const rule = makeRule({ conditions: [] })
     expect(evaluateRule(tx, rule)).toBe(false)
+  })
+})
+
+describe('extractRegexCaptures', () => {
+  it('returns capture groups from regex description condition', () => {
+    const tx = makeTx()
+    const rule = makeRule({
+      conditions: [{ field: 'description', operator: 'regex', value: '(walmart) (supercenter) #(\\d+)' }],
+    })
+    const captures = extractRegexCaptures(tx, rule)
+    expect(captures).not.toBeNull()
+    expect(captures![1]).toBe('walmart')
+    expect(captures![2]).toBe('supercenter')
+    expect(captures![3]).toBe('1234')
+  })
+
+  it('returns null when no regex condition exists', () => {
+    const tx = makeTx()
+    const rule = makeRule({
+      conditions: [{ field: 'description', operator: 'contains', value: 'walmart' }],
+    })
+    expect(extractRegexCaptures(tx, rule)).toBeNull()
+  })
+
+  it('returns null when regex does not match', () => {
+    const tx = makeTx({ normalizedDescription: 'amazon purchase' })
+    const rule = makeRule({
+      conditions: [{ field: 'description', operator: 'regex', value: '(walmart)' }],
+    })
+    expect(extractRegexCaptures(tx, rule)).toBeNull()
+  })
+
+  it('skips non-description regex conditions', () => {
+    const tx = makeTx()
+    const rule = makeRule({
+      conditions: [{ field: 'amount', operator: 'regex', value: '(50)' }],
+    })
+    expect(extractRegexCaptures(tx, rule)).toBeNull()
   })
 })

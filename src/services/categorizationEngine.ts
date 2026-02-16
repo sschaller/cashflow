@@ -1,11 +1,56 @@
 import type { Transaction, Rule } from '@/types/models.ts'
 import type { RepositoryProvider } from '@/repositories/interfaces.ts'
-import { evaluateRule } from '@/utils/ruleEvaluator.ts'
+import { evaluateRule, extractRegexCaptures } from '@/utils/ruleEvaluator.ts'
+
+export interface RuleResult {
+  categoryId?: number
+  displayDescription?: string
+}
+
+/**
+ * Apply rules to a transaction and return the combined actions.
+ * Rules are evaluated by priority (lower number = higher priority).
+ * The first matching rule that provides a categoryId wins for category.
+ * The first matching rule that provides a displayDescription wins for description.
+ */
+export function applyRules(
+  transaction: Transaction,
+  rules: Rule[]
+): RuleResult {
+  const sorted = [...rules].sort((a, b) => a.priority - b.priority)
+
+  const result: RuleResult = {}
+
+  for (const rule of sorted) {
+    if (!evaluateRule(transaction, rule)) continue
+
+    if (result.categoryId === undefined && rule.categoryId !== undefined) {
+      result.categoryId = rule.categoryId
+    }
+    if (result.displayDescription === undefined && rule.displayDescription) {
+      let desc = rule.displayDescription
+      // Substitute $1, $2, etc. from regex capture groups
+      if (/\$\d/.test(desc)) {
+        const captures = extractRegexCaptures(transaction, rule)
+        if (captures) {
+          desc = desc.replace(/\$(\d+)/g, (_, n) => captures[parseInt(n)] ?? '')
+        }
+      }
+      result.displayDescription = desc
+    }
+
+    // Stop early if both are resolved
+    if (result.categoryId !== undefined && result.displayDescription !== undefined) {
+      break
+    }
+  }
+
+  return result
+}
 
 /**
  * Categorize a transaction using the given rules.
- * Rules are expected to be sorted by priority (lower number = higher priority).
- * First matching rule wins. Returns the categoryId or null if no rule matches.
+ * Kept for backward compatibility — returns just the categoryId.
  */
 export function categorizeTransaction(
   transaction: Transaction,
@@ -16,21 +61,42 @@ export function categorizeTransaction(
     return transaction.categoryId
   }
 
-  // Sort rules by priority (lower = higher priority)
-  const sorted = [...rules].sort((a, b) => a.priority - b.priority)
-
-  for (const rule of sorted) {
-    if (evaluateRule(transaction, rule)) {
-      return rule.categoryId
-    }
-  }
-
-  return null
+  const result = applyRules(transaction, rules)
+  return result.categoryId ?? null
 }
 
 /**
- * Re-categorize multiple transactions using current rules.
- * Only updates transactions that are not manually categorized.
+ * Re-apply rules to multiple transactions.
+ * Only updates transactions that are not manually categorized/described.
+ */
+export function reapplyRules(
+  transactions: Transaction[],
+  rules: Rule[]
+): Map<number, Partial<Transaction>> {
+  const updates = new Map<number, Partial<Transaction>>()
+
+  for (const tx of transactions) {
+    const result = applyRules(tx, rules)
+    const changes: Partial<Transaction> = {}
+
+    if (!tx.isManualCategory && result.categoryId !== undefined && result.categoryId !== tx.categoryId) {
+      changes.categoryId = result.categoryId
+    }
+
+    if (!tx.isManualDescription && result.displayDescription !== undefined && result.displayDescription !== tx.displayDescription) {
+      changes.displayDescription = result.displayDescription
+    }
+
+    if (Object.keys(changes).length > 0) {
+      updates.set(tx.id!, changes)
+    }
+  }
+
+  return updates
+}
+
+/**
+ * @deprecated Use reapplyRules instead
  */
 export function recategorizeTransactions(
   transactions: Transaction[],
@@ -50,8 +116,8 @@ export function recategorizeTransactions(
 }
 
 /**
- * Fetch all transactions and enabled rules, then re-categorize.
- * Skips manually categorized transactions and respects rule priority.
+ * Fetch all transactions and enabled rules, then re-apply.
+ * Skips manually categorized/described transactions and respects rule priority.
  * Returns the number of updated transactions.
  */
 export async function rerunRules(repos: RepositoryProvider): Promise<number> {
@@ -60,10 +126,10 @@ export async function rerunRules(repos: RepositoryProvider): Promise<number> {
     repos.rules.getEnabled(),
   ])
 
-  const updates = recategorizeTransactions(transactions, rules)
+  const updates = reapplyRules(transactions, rules)
 
-  for (const [id, categoryId] of updates) {
-    await repos.transactions.update(id, { categoryId })
+  for (const [id, changes] of updates) {
+    await repos.transactions.update(id, changes)
   }
 
   return updates.size

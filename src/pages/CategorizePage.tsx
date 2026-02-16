@@ -242,7 +242,7 @@ export default function CategorizePage() {
         <div className="mb-3 flex items-start justify-between">
           <div>
             <p className="text-lg font-semibold text-gray-900 dark:text-white">
-              {currentTx.description}
+              {currentTx.displayDescription ?? currentTx.description}
             </p>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               {formatDate(currentTx.date)} &middot; {accountName} ({currentCurrency})

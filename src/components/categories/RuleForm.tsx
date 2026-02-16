@@ -35,7 +35,8 @@ const emptyCondition: RuleCondition = { field: 'description', operator: 'contain
 export function RuleForm({ rule, categories, onSave, onCancel }: RuleFormProps) {
   const [name, setName] = useState(rule?.name ?? '')
   const [conditions, setConditions] = useState<RuleCondition[]>(rule?.conditions ?? [{ ...emptyCondition }])
-  const [categoryId, setCategoryId] = useState<number>(rule?.categoryId ?? (categories[0]?.id ?? 0))
+  const [categoryId, setCategoryId] = useState<number | undefined>(rule?.categoryId)
+  const [displayDescription, setDisplayDescription] = useState(rule?.displayDescription ?? '')
   const [priority, setPriority] = useState(rule?.priority ?? 100)
   const [isEnabled, setIsEnabled] = useState(rule?.isEnabled ?? true)
 
@@ -64,6 +65,7 @@ export function RuleForm({ rule, categories, onSave, onCancel }: RuleFormProps) 
       name: name.trim() || 'Unnamed Rule',
       conditions,
       categoryId,
+      displayDescription: displayDescription.trim() || undefined,
       priority,
       isEnabled,
     })
@@ -74,17 +76,6 @@ export function RuleForm({ rule, categories, onSave, onCancel }: RuleFormProps) 
       <div>
         <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Rule Name</label>
         <input className={`w-full ${inputClass}`} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Grocery stores" />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Assign to Category</label>
-        <select className={`w-full ${selectClass}`} value={categoryId} onChange={(e) => setCategoryId(Number(e.target.value))}>
-          {leafCategories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.parentId !== null ? '  ' : ''}{c.name}
-            </option>
-          ))}
-        </select>
       </div>
 
       <div>
@@ -145,6 +136,34 @@ export function RuleForm({ rule, categories, onSave, onCancel }: RuleFormProps) 
         <Button type="button" variant="ghost" size="sm" className="mt-2" onClick={addCondition}>
           + Add Condition
         </Button>
+      </div>
+
+      <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+        <label className="mb-3 block text-sm font-medium text-gray-700 dark:text-gray-300">Actions</label>
+
+        <div className="space-y-3">
+          <div>
+            <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">Assign to Category</label>
+            <select className={`w-full ${selectClass}`} value={categoryId ?? ''} onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : undefined)}>
+              <option value="">No category change</option>
+              {leafCategories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.parentId !== null ? '  ' : ''}{c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">Display Description</label>
+            <input
+              className={`w-full ${inputClass}`}
+              value={displayDescription}
+              onChange={(e) => setDisplayDescription(e.target.value)}
+              placeholder="Override the displayed description..."
+            />
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
