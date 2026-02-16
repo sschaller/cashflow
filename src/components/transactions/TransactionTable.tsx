@@ -29,25 +29,71 @@ function CategoryCell({ cat, categories, catMap, onChange }: {
   onChange: (categoryId: number | undefined) => void
 }) {
   const [open, setOpen] = useState(false)
+  const [filter, setFilter] = useState('')
+  const [highlightIdx, setHighlightIdx] = useState(-1)
   const containerRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!open) return
+    if (!open) { setFilter(''); setHighlightIdx(-1); return }
+    inputRef.current?.focus()
     function handleMouseDown(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false)
       }
     }
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false)
-    }
     document.addEventListener('mousedown', handleMouseDown)
-    document.addEventListener('keydown', handleKeyDown)
     return () => {
       document.removeEventListener('mousedown', handleMouseDown)
-      document.removeEventListener('keydown', handleKeyDown)
     }
   }, [open])
+
+  const filtered = filter
+    ? categories.filter((c) => c.name.toLowerCase().includes(filter.toLowerCase()))
+    : categories
+
+  // Build flat options list: "Uncategorized" (only when no filter) + filtered categories
+  const options = useMemo(() => {
+    const items: { id: number | undefined; name: string; color?: string }[] = []
+    if (!filter) items.push({ id: undefined, name: 'Uncategorized' })
+    for (const c of filtered) items.push({ id: c.id!, name: c.name, color: c.color })
+    return items
+  }, [filter, filtered])
+
+  // Reset highlight to first item when filter text changes
+  useEffect(() => {
+    setHighlightIdx(filter ? 0 : -1)
+  }, [filter])
+
+  // Scroll highlighted item into view
+  useEffect(() => {
+    if (highlightIdx < 0 || !listRef.current) return
+    const el = listRef.current.children[highlightIdx] as HTMLElement | undefined
+    el?.scrollIntoView({ block: 'nearest' })
+  }, [highlightIdx])
+
+  const selectOption = (opt: { id: number | undefined }) => {
+    onChange(opt.id)
+    setOpen(false)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setOpen(false)
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setHighlightIdx((i) => Math.min(i + 1, options.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setHighlightIdx((i) => Math.max(i - 1, 0))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      if (highlightIdx >= 0 && highlightIdx < options.length) {
+        selectOption(options[highlightIdx])
+      }
+    }
+  }
 
   return (
     <div className="relative" ref={containerRef}>
@@ -67,34 +113,49 @@ function CategoryCell({ cat, categories, catMap, onChange }: {
       </button>
       {open && (
         <div
-          className="absolute left-0 top-full z-50 mt-1 max-h-64 w-48 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800"
+          className="absolute left-0 top-full z-50 mt-1 w-48 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
           onClick={(e) => e.stopPropagation()}
         >
-          <button
-            className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors ${
-              !cat ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700'
-            }`}
-            onClick={() => { onChange(undefined); setOpen(false) }}
-          >
-            Uncategorized
-          </button>
-          {categories.map((c) => {
-            const isActive = cat?.id === c.id
-            return (
-              <button
-                key={c.id}
-                className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors ${
-                  isActive
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700'
-                }`}
-                onClick={() => { onChange(c.id!); setOpen(false) }}
-              >
-                <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: c.color }} />
-                {c.name}
-              </button>
-            )
-          })}
+          <div className="border-b border-gray-200 px-3 py-1.5 dark:border-gray-700">
+            <input
+              ref={inputRef}
+              className="w-full bg-transparent text-sm text-gray-700 outline-none placeholder:text-gray-400 dark:text-gray-200 dark:placeholder:text-gray-500"
+              placeholder="Filter..."
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
+          </div>
+          <div className="max-h-56 overflow-y-auto py-1" ref={listRef}>
+            {options.map((opt, i) => {
+              const isActive = opt.id === cat?.id
+              const isHighlighted = i === highlightIdx
+              return (
+                <button
+                  key={opt.id ?? '_uncategorized'}
+                  className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors ${
+                    isHighlighted
+                      ? 'bg-gray-100 dark:bg-gray-700'
+                      : ''
+                  } ${
+                    isActive
+                      ? 'font-medium text-blue-600 dark:text-blue-400'
+                      : 'text-gray-700 dark:text-gray-200'
+                  }`}
+                  onMouseEnter={() => setHighlightIdx(i)}
+                  onClick={() => selectOption(opt)}
+                >
+                  {opt.color ? (
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: opt.color }} />
+                  ) : null}
+                  {opt.name}
+                </button>
+              )
+            })}
+            {options.length === 0 && (
+              <p className="px-3 py-2 text-sm text-gray-400">No matches</p>
+            )}
+          </div>
         </div>
       )}
     </div>
