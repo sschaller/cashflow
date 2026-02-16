@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -19,15 +19,100 @@ interface TransactionTableProps {
   categories: Category[]
   currencyMap?: Map<number, string>
   onSelect?: (transaction: Transaction) => void
+  onCategoryChange?: (transactionId: number, categoryId: number | undefined) => void
 }
 
-export function TransactionTable({ transactions, categories, currencyMap, onSelect }: TransactionTableProps) {
+function CategoryCell({ cat, categories, catMap, onChange }: {
+  cat: Category | undefined
+  categories: Category[]
+  catMap: Map<number, Category>
+  onChange: (categoryId: number | undefined) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function handleMouseDown(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', handleMouseDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open])
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setOpen(!open) }}
+        className="inline-flex items-center gap-1.5 rounded px-1 py-0.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+      >
+        {cat ? (
+          <>
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: cat.color }} />
+            {cat.name}
+          </>
+        ) : (
+          <span className="text-gray-400">Uncategorized</span>
+        )}
+      </button>
+      {open && (
+        <div
+          className="absolute left-0 top-full z-50 mt-1 max-h-64 w-48 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors ${
+              !cat ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700'
+            }`}
+            onClick={() => { onChange(undefined); setOpen(false) }}
+          >
+            Uncategorized
+          </button>
+          {categories.map((c) => {
+            const isActive = cat?.id === c.id
+            return (
+              <button
+                key={c.id}
+                className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors ${
+                  isActive
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700'
+                }`}
+                onClick={() => { onChange(c.id!); setOpen(false) }}
+              >
+                <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: c.color }} />
+                {c.name}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function TransactionTable({ transactions, categories, currencyMap, onSelect, onCategoryChange }: TransactionTableProps) {
   const [sorting, setSorting] = useState<SortingState>([{ id: 'date', desc: true }])
 
   const catMap = useMemo(() => {
     const map = new Map<number, Category>()
     for (const c of categories) map.set(c.id!, c)
     return map
+  }, [categories])
+
+  const leafCategories = useMemo(() => {
+    const parentIds = new Set(categories.filter((c) => c.parentId !== null).map((c) => c.parentId))
+    return categories.filter((c) => !parentIds.has(c.id!))
   }, [categories])
 
   const uniqueCurrency = useMemo(
@@ -51,16 +136,26 @@ export function TransactionTable({ transactions, categories, currencyMap, onSele
       {
         accessorKey: 'categoryId',
         header: 'Category',
-        meta: { shrink: true },
+        meta: { category: true },
         cell: (info) => {
           const catId = info.getValue<number | undefined>()
           const cat = catId ? catMap.get(catId) : undefined
-          if (!cat) return <span className="text-gray-400">-</span>
+          if (!onCategoryChange) {
+            if (!cat) return <span className="text-gray-400">-</span>
+            return (
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: cat.color }} />
+                {cat.name}
+              </span>
+            )
+          }
           return (
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: cat.color }} />
-              {cat.name}
-            </span>
+            <CategoryCell
+              cat={cat}
+              categories={leafCategories}
+              catMap={catMap}
+              onChange={(newId) => onCategoryChange(info.row.original.id!, newId)}
+            />
           )
         },
       },
@@ -86,7 +181,7 @@ export function TransactionTable({ transactions, categories, currencyMap, onSele
         },
       },
     ],
-    [catMap, currencyMap, uniqueCurrency]
+    [catMap, leafCategories, currencyMap, uniqueCurrency, onCategoryChange]
   )
 
   const table = useReactTable({
@@ -98,6 +193,7 @@ export function TransactionTable({ transactions, categories, currencyMap, onSele
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    autoResetPageIndex: false,
     initialState: { pagination: { pageSize: 25 } },
   })
 
@@ -109,11 +205,12 @@ export function TransactionTable({ transactions, categories, currencyMap, onSele
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
-                  const shrink = (header.column.columnDef.meta as Record<string, boolean> | undefined)?.shrink
+                  const meta = header.column.columnDef.meta as Record<string, boolean> | undefined
+                  const widthClass = meta?.shrink ? 'w-0' : meta?.category ? 'w-48' : 'w-full'
                   return (
                   <th
                     key={header.id}
-                    className={`cursor-pointer select-none whitespace-nowrap px-4 py-3 font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 ${shrink ? 'w-0' : 'w-full'}`}
+                    className={`cursor-pointer select-none whitespace-nowrap px-4 py-3 font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 ${widthClass}`}
                     onClick={header.column.getToggleSortingHandler()}
                   >
                     <span className="flex items-center gap-1">
@@ -141,9 +238,10 @@ export function TransactionTable({ transactions, categories, currencyMap, onSele
                   onClick={() => onSelect?.(row.original)}
                 >
                   {row.getVisibleCells().map((cell) => {
-                    const shrink = (cell.column.columnDef.meta as Record<string, boolean> | undefined)?.shrink
+                    const meta = cell.column.columnDef.meta as Record<string, boolean> | undefined
+                    const cellClass = meta?.shrink ? 'whitespace-nowrap' : meta?.category ? 'whitespace-nowrap' : 'max-w-0 truncate'
                     return (
-                    <td key={cell.id} className={`px-4 py-3 text-gray-700 dark:text-gray-300 ${shrink ? 'whitespace-nowrap' : 'max-w-0 truncate'}`}>
+                    <td key={cell.id} className={`px-4 py-3 text-gray-700 dark:text-gray-300 ${cellClass}`}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                     )

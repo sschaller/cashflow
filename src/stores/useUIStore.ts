@@ -1,17 +1,23 @@
 import { create } from 'zustand'
 import type { ReactNode } from 'react'
+import { getDateRange } from '@/utils/dateUtils.ts'
+
+const defaultRange = getDateRange('last-3-months')
 
 interface UIState {
   sidebarOpen: boolean
   darkMode: boolean
   pageTitle: string
   headerExtra: ReactNode | null
+  dateRangeStart: string
+  dateRangeEnd: string
   toggleSidebar: () => void
   setSidebarOpen: (open: boolean) => void
   toggleDarkMode: () => void
   setDarkMode: (dark: boolean) => void
   setPageTitle: (title: string) => void
   setHeaderExtra: (extra: ReactNode | null) => void
+  setDateRange: (start: string, end: string) => void
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -19,6 +25,8 @@ export const useUIStore = create<UIState>((set) => ({
   darkMode: localStorage.getItem('darkMode') === 'true',
   pageTitle: '',
   headerExtra: null,
+  dateRangeStart: defaultRange.start,
+  dateRangeEnd: defaultRange.end,
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   toggleDarkMode: () =>
@@ -33,4 +41,5 @@ export const useUIStore = create<UIState>((set) => ({
   },
   setPageTitle: (title) => set({ pageTitle: title }),
   setHeaderExtra: (extra) => set({ headerExtra: extra }),
+  setDateRange: (start, end) => set({ dateRangeStart: start, dateRangeEnd: end }),
 }))

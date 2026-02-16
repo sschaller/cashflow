@@ -6,9 +6,9 @@ import { useCategories } from '@/hooks/useCategories.ts'
 import { useAccounts } from '@/hooks/useAccounts.ts'
 import { useCurrencyLookup } from '@/hooks/useCurrencyLookup.ts'
 import { useFilterStore } from '@/stores/useFilterStore.ts'
-import { getDateRange } from '@/utils/dateUtils.ts'
+import { useUIStore } from '@/stores/useUIStore.ts'
+import { useRepositories } from '@/repositories/RepositoryContext.tsx'
 import { monthlyCategoryTotals } from '@/utils/aggregation.ts'
-import { DateRangeSelector } from '@/components/dashboard/DateRangeSelector.tsx'
 import { Card } from '@/components/ui/Card.tsx'
 import { ExpensePieChart } from '@/components/charts/ExpensePieChart.tsx'
 import { IncomeExpenseBar } from '@/components/charts/IncomeExpenseBar.tsx'
@@ -30,9 +30,9 @@ const tabs: { key: Tab; label: string }[] = [
 ]
 
 export default function ReportsPage() {
-  const defaultRange = getDateRange('last-6-months')
-  const [startDate, setStartDate] = useState(defaultRange.start)
-  const [endDate, setEndDate] = useState(defaultRange.end)
+  const repos = useRepositories()
+  const startDate = useUIStore((s) => s.dateRangeStart)
+  const endDate = useUIStore((s) => s.dateRangeEnd)
   const [activeTab, setActiveTab] = useState<Tab>('cashflow')
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null)
 
@@ -77,9 +77,8 @@ export default function ReportsPage() {
     setFilters({ startDate, endDate })
   }, [startDate, endDate, resetFilters, setFilters])
 
-  const handleDateRangeChange = (s: string, e: string) => {
-    setStartDate(s)
-    setEndDate(e)
+  const handleCategoryChange = async (transactionId: number, categoryId: number | undefined) => {
+    await repos.transactions.update(transactionId, { categoryId, isManualCategory: true })
   }
 
   const handleCategoryClick = (categoryId: number) => {
@@ -102,14 +101,6 @@ export default function ReportsPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <DateRangeSelector
-          startDate={startDate}
-          endDate={endDate}
-          onRangeChange={handleDateRangeChange}
-        />
-      </div>
-
       <Card className="mb-6">
         {loading ? (
           <div className="flex h-64 items-center justify-center">
@@ -142,6 +133,7 @@ export default function ReportsPage() {
         categories={categories}
         currencyMap={currencyMap}
         onSelect={setSelectedTx}
+        onCategoryChange={handleCategoryChange}
       />
 
       <TransactionDetailModal

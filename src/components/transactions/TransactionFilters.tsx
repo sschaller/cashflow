@@ -59,19 +59,6 @@ export function TransactionFilters({ categories, accounts }: TransactionFiltersP
         ))}
       </select>
 
-      <input
-        type="date"
-        className={selectClass}
-        value={filters.startDate ?? ''}
-        onChange={(e) => setFilter('startDate', e.target.value || undefined)}
-      />
-      <input
-        type="date"
-        className={selectClass}
-        value={filters.endDate ?? ''}
-        onChange={(e) => setFilter('endDate', e.target.value || undefined)}
-      />
-
       {hasFilters && (
         <Button variant="ghost" size="sm" onClick={resetFilters}>
           Clear Filters

@@ -1,5 +1,6 @@
 import { useUIStore } from '@/stores/useUIStore.ts'
 import { SyncIndicator } from '@/components/sync/SyncIndicator.tsx'
+import { DateRangeSelector } from '@/components/dashboard/DateRangeSelector.tsx'
 
 export function Header() {
   const toggleSidebar = useUIStore((s) => s.toggleSidebar)
@@ -7,6 +8,9 @@ export function Header() {
   const toggleDarkMode = useUIStore((s) => s.toggleDarkMode)
   const pageTitle = useUIStore((s) => s.pageTitle)
   const headerExtra = useUIStore((s) => s.headerExtra)
+  const dateRangeStart = useUIStore((s) => s.dateRangeStart)
+  const dateRangeEnd = useUIStore((s) => s.dateRangeEnd)
+  const setDateRange = useUIStore((s) => s.setDateRange)
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-6 dark:border-gray-700 dark:bg-gray-800">
@@ -26,6 +30,11 @@ export function Header() {
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
+        <DateRangeSelector
+          startDate={dateRangeStart}
+          endDate={dateRangeEnd}
+          onRangeChange={setDateRange}
+        />
         <SyncIndicator />
         <button
           onClick={toggleDarkMode}

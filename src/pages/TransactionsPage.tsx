@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { usePageHeader } from '@/hooks/usePageHeader.ts'
 import { useTransactions } from '@/hooks/useTransactions.ts'
 import { useCategories } from '@/hooks/useCategories.ts'
 import { useAccounts } from '@/hooks/useAccounts.ts'
 import { useCurrencyLookup } from '@/hooks/useCurrencyLookup.ts'
 import { useRepositories } from '@/repositories/RepositoryContext.tsx'
+import { useUIStore } from '@/stores/useUIStore.ts'
+import { useFilterStore } from '@/stores/useFilterStore.ts'
 import { TransactionTable } from '@/components/transactions/TransactionTable.tsx'
 import { TransactionFilters } from '@/components/transactions/TransactionFilters.tsx'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal.tsx'
@@ -21,6 +23,20 @@ export default function TransactionsPage() {
   const currencyMap = useCurrencyLookup(accounts)
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null)
   usePageHeader('Transactions')
+
+  const startDate = useUIStore((s) => s.dateRangeStart)
+  const endDate = useUIStore((s) => s.dateRangeEnd)
+  const setFilters = useFilterStore((s) => s.setFilters)
+  const resetFilters = useFilterStore((s) => s.resetFilters)
+
+  useEffect(() => {
+    setFilters({ startDate, endDate })
+    return () => resetFilters()
+  }, [startDate, endDate, setFilters, resetFilters])
+
+  const handleCategoryChange = async (transactionId: number, categoryId: number | undefined) => {
+    await repos.transactions.update(transactionId, { categoryId, isManualCategory: true })
+  }
 
   const handleReRunRules = async () => {
     const count = await rerunRules(repos)
@@ -45,6 +61,7 @@ export default function TransactionsPage() {
         categories={categories}
         currencyMap={currencyMap}
         onSelect={setSelectedTx}
+        onCategoryChange={handleCategoryChange}
       />
 
       <TransactionDetailModal

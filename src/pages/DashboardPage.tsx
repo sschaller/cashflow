@@ -1,17 +1,14 @@
-import { useState } from 'react'
 import { usePageHeader } from '@/hooks/usePageHeader.ts'
 import { Card } from '@/components/ui/Card.tsx'
 import { SummaryCards } from '@/components/dashboard/SummaryCards.tsx'
-import { DateRangeSelector } from '@/components/dashboard/DateRangeSelector.tsx'
 import { CategoryBreakdown } from '@/components/dashboard/CategoryBreakdown.tsx'
 import { useDashboardData } from '@/hooks/useDashboardData.ts'
-import { getDateRange } from '@/utils/dateUtils.ts'
+import { useUIStore } from '@/stores/useUIStore.ts'
 import { formatCurrencyOrPlain } from '@/utils/currencyUtils.ts'
 
 export default function DashboardPage() {
-  const defaultRange = getDateRange('last-3-months')
-  const [startDate, setStartDate] = useState(defaultRange.start)
-  const [endDate, setEndDate] = useState(defaultRange.end)
+  const startDate = useUIStore((s) => s.dateRangeStart)
+  const endDate = useUIStore((s) => s.dateRangeEnd)
 
   usePageHeader('Dashboard')
   const { summary, categoryBreakdown, loading, currency } = useDashboardData(startDate, endDate)
@@ -26,14 +23,6 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <DateRangeSelector
-          startDate={startDate}
-          endDate={endDate}
-          onRangeChange={(s, e) => { setStartDate(s); setEndDate(e) }}
-        />
-      </div>
-
       <div className="mb-6">
         <SummaryCards summary={summary} currency={currency} />
       </div>

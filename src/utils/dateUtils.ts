@@ -47,9 +47,37 @@ export function getDateRange(preset: string): { start: string; end: string } {
       const end = endOfYear(now)
       return { start: format(start, 'yyyy-MM-dd'), end: format(end, 'yyyy-MM-dd') }
     }
-    default:
+    default: {
+      const yearMatch = preset.match(/^year-(\d{4})$/)
+      if (yearMatch) {
+        const year = new Date(Number(yearMatch[1]), 0, 1)
+        return { start: format(startOfYear(year), 'yyyy-MM-dd'), end: format(endOfYear(year), 'yyyy-MM-dd') }
+      }
       return { start: format(startOfMonth(subMonths(now, 11)), 'yyyy-MM-dd'), end: format(endOfMonth(now), 'yyyy-MM-dd') }
+    }
   }
+}
+
+export interface DateRangePreset {
+  label: string
+  value: string
+  group: 'period' | 'year'
+}
+
+export function getDateRangePresets(): DateRangePreset[] {
+  const currentYear = new Date().getFullYear()
+  const periods: DateRangePreset[] = [
+    { label: 'This Month', value: 'this-month', group: 'period' },
+    { label: 'Last Month', value: 'last-month', group: 'period' },
+    { label: '3 Months', value: 'last-3-months', group: 'period' },
+    { label: '6 Months', value: 'last-6-months', group: 'period' },
+    { label: '12 Months', value: 'last-12-months', group: 'period' },
+  ]
+  const years: DateRangePreset[] = Array.from({ length: 4 }, (_, i) => {
+    const year = currentYear - i
+    return { label: `${year}`, value: `year-${year}`, group: 'year' as const }
+  })
+  return [...periods, ...years]
 }
 
 export function toISODate(date: Date): string {
