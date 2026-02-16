@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { usePageHeader } from '@/hooks/usePageHeader.ts'
 import { Card } from '@/components/ui/Card.tsx'
 import { SummaryCards } from '@/components/dashboard/SummaryCards.tsx'
 import { DateRangeSelector } from '@/components/dashboard/DateRangeSelector.tsx'
@@ -12,6 +13,7 @@ export default function DashboardPage() {
   const [startDate, setStartDate] = useState(defaultRange.start)
   const [endDate, setEndDate] = useState(defaultRange.end)
 
+  usePageHeader('Dashboard')
   const { summary, categoryBreakdown, loading, currency } = useDashboardData(startDate, endDate)
 
   if (loading) {
@@ -24,13 +26,6 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Overview of your finances</p>
-        </div>
-      </div>
-
       <div className="mb-6">
         <DateRangeSelector
           startDate={startDate}

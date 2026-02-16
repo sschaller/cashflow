@@ -5,19 +5,27 @@ export function Header() {
   const toggleSidebar = useUIStore((s) => s.toggleSidebar)
   const darkMode = useUIStore((s) => s.darkMode)
   const toggleDarkMode = useUIStore((s) => s.toggleDarkMode)
+  const pageTitle = useUIStore((s) => s.pageTitle)
+  const headerExtra = useUIStore((s) => s.headerExtra)
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-6 dark:border-gray-700 dark:bg-gray-800">
-      <button
-        onClick={toggleSidebar}
-        className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
-      >
-        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-        </svg>
-      </button>
+      <div className="flex min-w-0 items-center gap-3">
+        <button
+          onClick={toggleSidebar}
+          className="shrink-0 rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+        >
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+          </svg>
+        </button>
+        {pageTitle && (
+          <h1 className="truncate text-lg font-semibold text-gray-900 dark:text-white">{pageTitle}</h1>
+        )}
+        {headerExtra && <div className="hidden sm:flex">{headerExtra}</div>}
+      </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex shrink-0 items-center gap-1">
         <SyncIndicator />
         <button
           onClick={toggleDarkMode}

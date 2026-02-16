@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
+import { usePageHeader } from '@/hooks/usePageHeader.ts'
 import { useUncategorizedTransactions } from '@/hooks/useUncategorizedTransactions.ts'
 import { useCategories } from '@/hooks/useCategories.ts'
 import { useAccounts } from '@/hooks/useAccounts.ts'
@@ -20,6 +21,7 @@ interface UndoEntry {
 }
 
 export default function CategorizePage() {
+  usePageHeader('Categorize')
   const repos = useRepositories()
   const uncategorized = useUncategorizedTransactions()
   const categories = useCategories()
@@ -209,12 +211,9 @@ export default function CategorizePage() {
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Categorize</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {categorizedCount} of {effectiveTotal} categorized
-          </p>
-        </div>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {categorizedCount} of {effectiveTotal} categorized
+        </p>
         <div className="flex gap-2">
           {undoStack.length > 0 && (
             <Button variant="ghost" size="sm" onClick={handleUndo}>

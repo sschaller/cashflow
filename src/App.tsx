@@ -10,7 +10,6 @@ import TransactionsPage from '@/pages/TransactionsPage.tsx'
 import ImportPage from '@/pages/ImportPage.tsx'
 import CategorizePage from '@/pages/CategorizePage.tsx'
 import CategoriesPage from '@/pages/CategoriesPage.tsx'
-import ChartsPage from '@/pages/ChartsPage.tsx'
 import ReportsPage from '@/pages/ReportsPage.tsx'
 import SettingsPage from '@/pages/SettingsPage.tsx'
 
@@ -37,7 +36,6 @@ export default function App() {
             <Route path="import" element={<ImportPage />} />
             <Route path="categorize" element={<CategorizePage />} />
             <Route path="categories" element={<CategoriesPage />} />
-            <Route path="charts" element={<ChartsPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>

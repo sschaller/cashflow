@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { usePageHeader } from '@/hooks/usePageHeader.ts'
 import { useTransactions } from '@/hooks/useTransactions.ts'
 import { useCategories } from '@/hooks/useCategories.ts'
 import { useAccounts } from '@/hooks/useAccounts.ts'
@@ -19,6 +20,7 @@ export default function TransactionsPage() {
   const accounts = useAccounts()
   const currencyMap = useCurrencyLookup(accounts)
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null)
+  usePageHeader('Transactions')
 
   const handleReRunRules = async () => {
     const count = await rerunRules(repos)
@@ -28,10 +30,7 @@ export default function TransactionsPage() {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Transactions</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{transactions.length} transactions</p>
-        </div>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{transactions.length} transactions</p>
         <Button variant="secondary" size="sm" onClick={handleReRunRules}>
           Re-run Rules
         </Button>

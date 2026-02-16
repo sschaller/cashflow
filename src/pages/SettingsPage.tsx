@@ -1,3 +1,4 @@
+import { usePageHeader } from '@/hooks/usePageHeader.ts'
 import { Card } from '@/components/ui/Card.tsx'
 import { AccountManager } from '@/components/settings/AccountManager.tsx'
 import { DataManagement } from '@/components/settings/DataManagement.tsx'
@@ -8,11 +9,10 @@ import { useUIStore } from '@/stores/useUIStore.ts'
 export default function SettingsPage() {
   const darkMode = useUIStore((s) => s.darkMode)
   const toggleDarkMode = useUIStore((s) => s.toggleDarkMode)
+  usePageHeader('Settings')
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="mb-1 text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
-      <p className="mb-8 text-gray-600 dark:text-gray-400">Manage accounts, data, and preferences</p>
 
       <div className="space-y-6">
         <Card>

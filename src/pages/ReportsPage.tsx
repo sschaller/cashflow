@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import { usePageHeader } from '@/hooks/usePageHeader.ts'
 import { useDashboardData } from '@/hooks/useDashboardData.ts'
 import { useTransactions } from '@/hooks/useTransactions.ts'
 import { useCategories } from '@/hooks/useCategories.ts'
@@ -34,6 +35,25 @@ export default function ReportsPage() {
   const [endDate, setEndDate] = useState(defaultRange.end)
   const [activeTab, setActiveTab] = useState<Tab>('cashflow')
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null)
+
+  const tabBar = (
+    <div className="flex gap-1">
+      {tabs.map((tab) => (
+        <button
+          key={tab.key}
+          onClick={() => setActiveTab(tab.key)}
+          className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            activeTab === tab.key
+              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+              : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+          }`}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  )
+  usePageHeader('Reports', tabBar)
 
   const setFilter = useFilterStore((s) => s.setFilter)
   const setFilters = useFilterStore((s) => s.setFilters)
@@ -83,11 +103,6 @@ export default function ReportsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Reports</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Interactive charts with filterable transactions</p>
-      </div>
-
-      <div className="mb-6">
         <DateRangeSelector
           startDate={startDate}
           endDate={endDate}
@@ -96,22 +111,6 @@ export default function ReportsPage() {
       </div>
 
       <Card className="mb-6">
-        <div className="mb-4 flex gap-1 border-b border-gray-200 dark:border-gray-700">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${
-                activeTab === tab.key
-                  ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
-                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
         {loading ? (
           <div className="flex h-64 items-center justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
