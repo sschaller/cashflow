@@ -70,7 +70,7 @@ export function extractRegexCaptures(transaction: Transaction, rule: Rule): RegE
   for (const condition of rule.conditions) {
     if (condition.field !== 'description' || condition.operator !== 'regex') continue
     try {
-      const match = transaction.normalizedDescription.match(new RegExp(condition.value, 'i'))
+      const match = transaction.description.match(new RegExp(condition.value, 'i'))
       if (match) return match
     } catch {
       // invalid regex

@@ -100,6 +100,7 @@ export function TransactionDetailModal({ transaction, onClose, categories, curre
           <RuleForm
             rule={prefillRule}
             categories={categories}
+            transactionDescription={transaction.description}
             onSave={handleSaveRule}
             onCancel={() => setShowRuleForm(false)}
           />

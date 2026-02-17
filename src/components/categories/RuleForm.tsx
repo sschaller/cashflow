@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Button } from '@/components/ui/Button.tsx'
 import type { Rule, RuleCondition, Category } from '@/types/models.ts'
 import type { RuleField, RuleOperator } from '@/types/enums.ts'
@@ -6,6 +6,7 @@ import type { RuleField, RuleOperator } from '@/types/enums.ts'
 interface RuleFormProps {
   rule?: Rule
   categories: Category[]
+  transactionDescription?: string
   onSave: (rule: Omit<Rule, 'id'>) => void
   onCancel: () => void
 }
@@ -32,7 +33,102 @@ const operatorOptions: { value: RuleOperator; label: string; fields?: RuleField[
 
 const emptyCondition: RuleCondition = { field: 'description', operator: 'contains', value: '' }
 
-export function RuleForm({ rule, categories, onSave, onCancel }: RuleFormProps) {
+const groupColors = [
+  'bg-purple-200 dark:bg-purple-800',
+  'bg-green-200 dark:bg-green-800',
+  'bg-orange-200 dark:bg-orange-800',
+  'bg-pink-200 dark:bg-pink-800',
+  'bg-teal-200 dark:bg-teal-800',
+]
+
+function HighlightedDescription({ description, conditions }: { description: string; conditions: RuleCondition[] }) {
+  const regexCondition = conditions.find((c) => c.field === 'description' && c.operator === 'regex' && c.value)
+
+  const segments = useMemo(() => {
+    if (!regexCondition) return null
+    try {
+      const re = new RegExp(regexCondition.value, 'i')
+      const match = description.match(re)
+      if (!match || match.index === undefined) return null
+
+      const result: { text: string; type: 'plain' | 'match' | 'group'; groupIndex?: number }[] = []
+      const fullStart = match.index
+      const fullEnd = fullStart + match[0].length
+
+      // Build group ranges (sub-matches within the full match)
+      const groupRanges: { start: number; end: number; index: number }[] = []
+      if (match.length > 1) {
+        // Find each capture group's position within the original string
+        let searchFrom = fullStart
+        for (let g = 1; g < match.length; g++) {
+          if (match[g] === undefined) continue
+          const gStart = description.indexOf(match[g], searchFrom)
+          if (gStart === -1 || gStart >= fullEnd) continue
+          groupRanges.push({ start: gStart, end: gStart + match[g].length, index: g })
+          searchFrom = gStart + match[g].length
+        }
+      }
+
+      // Text before full match
+      if (fullStart > 0) {
+        result.push({ text: description.slice(0, fullStart), type: 'plain' })
+      }
+
+      // Walk through the full match, splitting at group boundaries
+      if (groupRanges.length === 0) {
+        result.push({ text: match[0], type: 'match' })
+      } else {
+        let pos = fullStart
+        for (const gr of groupRanges) {
+          if (gr.start > pos) {
+            result.push({ text: description.slice(pos, gr.start), type: 'match' })
+          }
+          result.push({ text: description.slice(gr.start, gr.end), type: 'group', groupIndex: gr.index })
+          pos = gr.end
+        }
+        if (pos < fullEnd) {
+          result.push({ text: description.slice(pos, fullEnd), type: 'match' })
+        }
+      }
+
+      // Text after full match
+      if (fullEnd < description.length) {
+        result.push({ text: description.slice(fullEnd), type: 'plain' })
+      }
+
+      return result
+    } catch {
+      return null
+    }
+  }, [description, regexCondition])
+
+  if (!segments) {
+    return <p className="font-medium text-gray-900 dark:text-white">{description}</p>
+  }
+
+  return (
+    <p className="font-medium text-gray-900 dark:text-white">
+      {segments.map((seg, i) => {
+        if (seg.type === 'plain') return <span key={i}>{seg.text}</span>
+        if (seg.type === 'group') {
+          const colorClass = groupColors[(seg.groupIndex! - 1) % groupColors.length]
+          return (
+            <span key={i} className={`rounded px-0.5 ${colorClass}`} title={`$${seg.groupIndex}`}>
+              {seg.text}
+            </span>
+          )
+        }
+        return (
+          <span key={i} className="rounded px-0.5 bg-blue-200 dark:bg-blue-800">
+            {seg.text}
+          </span>
+        )
+      })}
+    </p>
+  )
+}
+
+export function RuleForm({ rule, categories, transactionDescription, onSave, onCancel }: RuleFormProps) {
   const [name, setName] = useState(rule?.name ?? '')
   const [conditions, setConditions] = useState<RuleCondition[]>(rule?.conditions ?? [{ ...emptyCondition }])
   const [categoryId, setCategoryId] = useState<number | undefined>(rule?.categoryId)
@@ -77,6 +173,13 @@ export function RuleForm({ rule, categories, onSave, onCancel }: RuleFormProps) 
         <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Rule Name</label>
         <input className={`w-full ${inputClass}`} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Grocery stores" />
       </div>
+
+      {transactionDescription && conditions.some((c) => c.field === 'description' && c.operator === 'regex' && c.value) && (
+        <div className="rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-900">
+          <p className="mb-1 text-gray-500 dark:text-gray-400">Match preview:</p>
+          <HighlightedDescription description={transactionDescription} conditions={conditions} />
+        </div>
+      )}
 
       <div>
         <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
