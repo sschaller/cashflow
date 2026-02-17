@@ -109,7 +109,7 @@ export default function ReportsPage() {
         ) : (
           <>
             {activeTab === 'cashflow' && (
-              <SankeyDiagram transactions={dashTx} categories={categories} currency={currency} bare />
+              <SankeyDiagram transactions={dashTx} categories={categories} currency={currency} bare onCategoryClick={handleCategoryClick} />
             )}
             {activeTab === 'categories-total' && (
               <ExpensePieChart data={categoryBreakdown} currency={currency} onCategoryClick={handleCategoryClick} bare />

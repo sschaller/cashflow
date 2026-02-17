@@ -43,6 +43,7 @@ export function TransactionFilters({ categories, accounts }: TransactionFiltersP
         onChange={(e) => setFilter('categoryId', e.target.value ? Number(e.target.value) : undefined)}
       >
         <option value="">All categories</option>
+        <option value="0">Uncategorized</option>
         {categories.map((c) => (
           <option key={c.id} value={c.id}>{c.name}</option>
         ))}

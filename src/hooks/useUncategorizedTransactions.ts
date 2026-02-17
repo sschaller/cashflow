@@ -5,7 +5,7 @@ import type { Transaction } from '@/types/models.ts'
 export function useUncategorizedTransactions(): Transaction[] {
   const transactions = useLiveQuery(async () => {
     const all = await db.transactions.orderBy('date').reverse().toArray()
-    return all.filter((t) => t.categoryId === undefined)
+    return all.filter((t) => t.categoryId == null)
   })
   return transactions ?? []
 }

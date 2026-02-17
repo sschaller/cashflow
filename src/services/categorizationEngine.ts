@@ -1,6 +1,7 @@
 import type { Transaction, Rule } from '@/types/models.ts'
 import type { RepositoryProvider } from '@/repositories/interfaces.ts'
 import { evaluateRule, extractRegexCaptures } from '@/utils/ruleEvaluator.ts'
+import { db } from '@/db/index.ts'
 
 export interface RuleResult {
   categoryId?: number
@@ -12,12 +13,14 @@ export interface RuleResult {
  * Rules are evaluated by priority (lower number = higher priority).
  * The first matching rule that provides a categoryId wins for category.
  * The first matching rule that provides a displayDescription wins for description.
+ * If `presorted` is true, the rules array is assumed to already be sorted by priority.
  */
 export function applyRules(
   transaction: Transaction,
-  rules: Rule[]
+  rules: Rule[],
+  presorted = false
 ): RuleResult {
-  const sorted = [...rules].sort((a, b) => a.priority - b.priority)
+  const sorted = presorted ? rules : [...rules].sort((a, b) => a.priority - b.priority)
 
   const result: RuleResult = {}
 
@@ -73,10 +76,14 @@ export function reapplyRules(
   transactions: Transaction[],
   rules: Rule[]
 ): Map<number, Partial<Transaction>> {
+  const sorted = [...rules].sort((a, b) => a.priority - b.priority)
   const updates = new Map<number, Partial<Transaction>>()
 
   for (const tx of transactions) {
-    const result = applyRules(tx, rules)
+    // Skip transactions where both category and description are manually set
+    if (tx.isManualCategory && tx.isManualDescription) continue
+
+    const result = applyRules(tx, sorted, true)
     const changes: Partial<Transaction> = {}
 
     if (!tx.isManualCategory && result.categoryId !== undefined && result.categoryId !== tx.categoryId) {
@@ -118,6 +125,7 @@ export function recategorizeTransactions(
 /**
  * Fetch all transactions and enabled rules, then re-apply.
  * Skips manually categorized/described transactions and respects rule priority.
+ * Writes all updates in a single IndexedDB transaction for performance.
  * Returns the number of updated transactions.
  */
 export async function rerunRules(repos: RepositoryProvider): Promise<number> {
@@ -128,8 +136,13 @@ export async function rerunRules(repos: RepositoryProvider): Promise<number> {
 
   const updates = reapplyRules(transactions, rules)
 
-  for (const [id, changes] of updates) {
-    await repos.transactions.update(id, changes)
+  if (updates.size > 0) {
+    const now = new Date().toISOString()
+    await db.transaction('rw', db.transactions, async () => {
+      for (const [id, changes] of updates) {
+        await db.transactions.update(id, { ...changes, updatedAt: now })
+      }
+    })
   }
 
   return updates.size

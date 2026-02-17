@@ -1,5 +1,19 @@
 import type { Transaction, Rule, RuleCondition } from '@/types/models.ts'
 
+const regexCache = new Map<string, RegExp | null>()
+
+function getCachedRegex(pattern: string): RegExp | null {
+  let cached = regexCache.get(pattern)
+  if (cached !== undefined) return cached
+  try {
+    cached = new RegExp(pattern, 'i')
+  } catch {
+    cached = null
+  }
+  regexCache.set(pattern, cached)
+  return cached
+}
+
 export function evaluateCondition(transaction: Transaction, condition: RuleCondition): boolean {
   const { field, operator, value, valueTo } = condition
 
@@ -38,20 +52,19 @@ export function evaluateCondition(transaction: Transaction, condition: RuleCondi
       return fieldValue.startsWith(lowerValue)
     case 'ends_with':
       return fieldValue.endsWith(lowerValue)
-    case 'regex':
-      try {
-        return new RegExp(value, 'i').test(fieldValue)
-      } catch {
-        return false
-      }
+    case 'regex': {
+      const re = getCachedRegex(value)
+      return re ? re.test(fieldValue) : false
+    }
     case 'greater_than':
       return parseFloat(fieldValue) > parseFloat(value)
     case 'less_than':
       return parseFloat(fieldValue) < parseFloat(value)
-    case 'between':
+    case 'between': {
       if (!valueTo) return false
       const num = parseFloat(fieldValue)
       return num >= parseFloat(value) && num <= parseFloat(valueTo)
+    }
     default:
       return false
   }
@@ -69,12 +82,10 @@ export function evaluateRule(transaction: Transaction, rule: Rule): boolean {
 export function extractRegexCaptures(transaction: Transaction, rule: Rule): RegExpMatchArray | null {
   for (const condition of rule.conditions) {
     if (condition.field !== 'description' || condition.operator !== 'regex') continue
-    try {
-      const match = transaction.description.match(new RegExp(condition.value, 'i'))
-      if (match) return match
-    } catch {
-      // invalid regex
-    }
+    const re = getCachedRegex(condition.value)
+    if (!re) continue
+    const match = transaction.description.match(re)
+    if (match) return match
   }
   return null
 }

@@ -126,6 +126,31 @@ export class FinanceDB extends Dexie {
       importProfiles: '++id, name, accountId, updatedAt',
     })
 
+    // Version 5: remove system Uncategorized category, clear orphaned categoryIds
+    this.version(5).stores({
+      accounts: '++id, name, type, isActive, updatedAt',
+      transactions: '++id, [accountId+date], [categoryId+date], hash, date, type, accountId, categoryId, updatedAt',
+      categories: '++id, parentId, name, sortOrder, updatedAt',
+      rules: '++id, categoryId, priority, isEnabled, updatedAt',
+      importProfiles: '++id, name, accountId, updatedAt',
+    }).upgrade(async tx => {
+      const cats = await tx.table('categories').toArray()
+      const uncatIds = cats.filter((c: Category) => c.isSystem && c.name === 'Uncategorized').map((c: Category) => c.id!)
+      const validCatIds = new Set(cats.map((c: Category) => c.id!))
+
+      // Clear categoryId on transactions pointing to Uncategorized or non-existent categories
+      await tx.table('transactions').toCollection().modify((t: Transaction) => {
+        if (t.categoryId != null && (uncatIds.includes(t.categoryId) || !validCatIds.has(t.categoryId))) {
+          delete (t as Record<string, unknown>).categoryId
+        }
+      })
+
+      // Delete the Uncategorized category records
+      if (uncatIds.length > 0) {
+        await tx.table('categories').bulkDelete(uncatIds)
+      }
+    })
+
     // Auto-set updatedAt on every write
     const tables = [this.accounts, this.transactions, this.categories, this.rules, this.importProfiles]
     for (const table of tables) {

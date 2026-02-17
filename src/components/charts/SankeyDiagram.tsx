@@ -1,6 +1,5 @@
 import { useRef, useEffect, useMemo } from 'react'
 import { sankey, sankeyLinkHorizontal, type SankeyNode as D3SankeyNode, type SankeyLink as D3SankeyLink } from 'd3-sankey'
-import { scaleOrdinal } from 'd3-scale'
 import { ChartContainer } from './ChartContainer.tsx'
 import { formatCurrencyOrPlain } from '@/utils/currencyUtils.ts'
 import type { Transaction, Category } from '@/types/models.ts'
@@ -10,11 +9,13 @@ interface SankeyDiagramProps {
   categories: Category[]
   currency: string | null
   bare?: boolean
+  onCategoryClick?: (categoryId: number) => void
 }
 
 interface SNode {
   name: string
   id: string
+  color?: string
 }
 
 interface SLink {
@@ -23,7 +24,7 @@ interface SLink {
   value: number
 }
 
-export function SankeyDiagram({ transactions, categories, currency, bare }: SankeyDiagramProps) {
+export function SankeyDiagram({ transactions, categories, currency, bare, onCategoryClick }: SankeyDiagramProps) {
   const svgRef = useRef<SVGSVGElement>(null)
 
   const catMap = useMemo(() => {
@@ -36,9 +37,9 @@ export function SankeyDiagram({ transactions, categories, currency, bare }: Sank
     const nodeSet = new Map<string, SNode>()
     const linkMap = new Map<string, number>()
 
-    const ensureNode = (id: string, name: string) => {
+    const ensureNode = (id: string, name: string, color?: string) => {
       if (!nodeSet.has(id)) {
-        nodeSet.set(id, { name, id })
+        nodeSet.set(id, { name, id, color })
       }
     }
 
@@ -48,32 +49,48 @@ export function SankeyDiagram({ transactions, categories, currency, bare }: Sank
       linkMap.set(key, (linkMap.get(key) ?? 0) + value)
     }
 
-    ensureNode('income', 'Income')
-    ensureNode('expenses', 'Expenses')
+    let totalIncome = 0
+    let totalExpenses = 0
+
+    ensureNode('budget', 'Budget', '#78909C')
 
     for (const tx of transactions) {
+      const cat = tx.categoryId ? catMap.get(tx.categoryId) : undefined
+      const catId = cat?.id ?? 0
+
       if (tx.amount > 0) {
-        const cat = tx.categoryId ? catMap.get(tx.categoryId) : undefined
-        const catId = `cat-${tx.categoryId ?? 0}`
-        ensureNode(catId, cat?.name ?? 'Uncategorized')
-        addLink('income', catId, tx.amount)
+        // Income: income-cat → Budget
+        const catNodeId = `income-cat-${catId}`
+        ensureNode(catNodeId, cat?.name ?? 'Uncategorized', cat?.color)
+        addLink(catNodeId, 'budget', tx.amount)
+        totalIncome += tx.amount
       } else if (tx.amount < 0) {
-        const cat = tx.categoryId ? catMap.get(tx.categoryId) : undefined
+        // Expense: Budget → expense-cat (→ expense-subcat)
         const parentCat = cat?.parentId ? catMap.get(cat.parentId) : null
+        const absAmount = Math.abs(tx.amount)
 
         if (parentCat) {
-          const parentId = `cat-${parentCat.id}`
-          const childId = `subcat-${cat!.id}`
-          ensureNode(parentId, parentCat.name)
-          ensureNode(childId, cat!.name)
-          addLink('expenses', parentId, Math.abs(tx.amount))
-          addLink(parentId, childId, Math.abs(tx.amount))
+          const parentNodeId = `expense-cat-${parentCat.id}`
+          const childNodeId = `expense-subcat-${cat!.id}`
+          ensureNode(parentNodeId, parentCat.name, parentCat.color)
+          ensureNode(childNodeId, cat!.name, cat!.color)
+          addLink('budget', parentNodeId, absAmount)
+          addLink(parentNodeId, childNodeId, absAmount)
         } else {
-          const catId = `cat-${tx.categoryId ?? 0}`
-          ensureNode(catId, cat?.name ?? 'Uncategorized')
-          addLink('expenses', catId, Math.abs(tx.amount))
+          const catNodeId = `expense-cat-${catId}`
+          ensureNode(catNodeId, cat?.name ?? 'Uncategorized', cat?.color)
+          addLink('budget', catNodeId, absAmount)
         }
+
+        totalExpenses += absAmount
       }
+    }
+
+    // Add savings node if income > expenses
+    const surplus = totalIncome - totalExpenses
+    if (surplus > 0) {
+      ensureNode('savings', 'Savings', '#4CAF50')
+      addLink('budget', 'savings', surplus)
     }
 
     const nodeList = Array.from(nodeSet.values())
@@ -109,13 +126,9 @@ export function SankeyDiagram({ transactions, categories, currency, bare }: Sank
       links: links.map((d) => ({ ...d })),
     })
 
-    const colorScale = scaleOrdinal<string>()
-      .domain(nodes.map((n) => n.id))
-      .range([
-        '#4CAF50', '#F44336', '#FF9800', '#E91E63', '#9C27B0',
-        '#673AB7', '#00BCD4', '#FF5722', '#3F51B5', '#607D8B',
-        '#795548', '#009688', '#CDDC39', '#2196F3', '#9E9E9E',
-      ])
+    const getNodeColor = (node: SNode & { color?: string }) => {
+      return node.color ?? '#9E9E9E'
+    }
 
     // Draw links
     const linkGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g')
@@ -127,7 +140,7 @@ export function SankeyDiagram({ transactions, categories, currency, bare }: Sank
       const pathD = sankeyLinkHorizontal()(link as unknown as D3SankeyLink<SNode, SLink>)
       if (pathD) path.setAttribute('d', pathD)
       const sourceNode = link.source as D3SankeyNode<SNode, SLink>
-      path.setAttribute('stroke', colorScale(sourceNode.id ?? ''))
+      path.setAttribute('stroke', getNodeColor(sourceNode))
       path.setAttribute('stroke-width', String(Math.max(1, link.width ?? 1)))
       path.addEventListener('mouseenter', () => path.setAttribute('stroke-opacity', '0.6'))
       path.addEventListener('mouseleave', () => path.setAttribute('stroke-opacity', '0.3'))
@@ -155,8 +168,17 @@ export function SankeyDiagram({ transactions, categories, currency, bare }: Sank
       rect.setAttribute('y', String(y0))
       rect.setAttribute('width', String(x1 - x0))
       rect.setAttribute('height', String(Math.max(1, y1 - y0)))
-      rect.setAttribute('fill', colorScale(node.id ?? ''))
+      rect.setAttribute('fill', getNodeColor(node))
       rect.setAttribute('rx', '2')
+
+      // Parse node ID to determine click behavior
+      const nodeId = node.id ?? ''
+      const catMatch = nodeId.match(/^(?:income-cat|expense-cat|expense-subcat)-(\d+)$/)
+      if (catMatch && onCategoryClick) {
+        rect.style.cursor = 'pointer'
+        const id = Number(catMatch[1])
+        rect.addEventListener('click', () => onCategoryClick(id))
+      }
 
       const title = document.createElementNS('http://www.w3.org/2000/svg', 'title')
       title.textContent = `${node.name}: ${formatCurrencyOrPlain(node.value ?? 0, currency)}`
@@ -175,7 +197,7 @@ export function SankeyDiagram({ transactions, categories, currency, bare }: Sank
       nodeGroup.appendChild(text)
     }
     svg.appendChild(nodeGroup)
-  }, [nodes, links, isEmpty, currency])
+  }, [nodes, links, isEmpty, currency, onCategoryClick])
 
   return (
     <ChartContainer title="Money Flow (Sankey)" empty={isEmpty} bare={bare}>

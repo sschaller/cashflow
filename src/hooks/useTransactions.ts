@@ -14,7 +14,11 @@ export function useTransactions() {
       results = results.filter((t) => t.accountId === filters.accountId)
     }
     if (filters.categoryId !== undefined) {
-      results = results.filter((t) => t.categoryId === filters.categoryId)
+      if (filters.categoryId === 0) {
+        results = results.filter((t) => t.categoryId == null)
+      } else {
+        results = results.filter((t) => t.categoryId === filters.categoryId)
+      }
     }
     if (filters.type) {
       results = results.filter((t) => t.type === filters.type)

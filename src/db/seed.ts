@@ -21,7 +21,6 @@ const defaultCategories: Category[] = [
   { id: 13, name: 'Gifts & Donations', parentId: null, color: '#CDDC39', icon: 'gift', isSystem: true, sortOrder: 12, updatedAt: SEED_EPOCH },
   { id: 14, name: 'Travel', parentId: null, color: '#2196F3', icon: 'plane', isSystem: true, sortOrder: 13, updatedAt: SEED_EPOCH },
   { id: 15, name: 'Transfers', parentId: null, color: '#9E9E9E', icon: 'repeat', isSystem: true, sortOrder: 14, updatedAt: SEED_EPOCH },
-  { id: 16, name: 'Uncategorized', parentId: null, color: '#BDBDBD', icon: 'help-circle', isSystem: true, sortOrder: 99, updatedAt: SEED_EPOCH },
 
   // Income subcategories
   { id: 17, name: 'Salary', parentId: 1, color: '#66BB6A', icon: 'briefcase', isSystem: true, sortOrder: 0, updatedAt: SEED_EPOCH },
