@@ -24,7 +24,7 @@ export function useDashboardData(startDate: string, endDate: string) {
     return {
       transactions: txs,
       summary: computeDashboardSummary(txs, cats),
-      categoryBreakdown: sumByCategory(txs.filter((t) => t.amount < 0), cats),
+      categoryBreakdown: sumByCategory(txs, cats),
       monthlyTotals: monthlyTotals(txs),
       loading: transactions === undefined || categories === undefined,
       currency,

@@ -22,10 +22,9 @@ interface TransactionTableProps {
   onCategoryChange?: (transactionId: number, categoryId: number | undefined) => void
 }
 
-function CategoryCell({ cat, categories, catMap, onChange }: {
+function CategoryCell({ cat, categories, onChange }: {
   cat: Category | undefined
   categories: Category[]
-  catMap: Map<number, Category>
   onChange: (categoryId: number | undefined) => void
 }) {
   const [open, setOpen] = useState(false)
@@ -214,7 +213,6 @@ export function TransactionTable({ transactions, categories, currencyMap, onSele
             <CategoryCell
               cat={cat}
               categories={leafCategories}
-              catMap={catMap}
               onChange={(newId) => onCategoryChange(info.row.original.id!, newId)}
             />
           )

@@ -14,23 +14,32 @@ export function sumByCategory(
   for (const tx of transactions) {
     const catId = tx.categoryId ?? 0
     const existing = totals.get(catId) ?? { amount: 0, count: 0 }
-    existing.amount += Math.abs(tx.amount)
+    existing.amount += tx.amount
     existing.count++
     totals.set(catId, existing)
   }
 
-  const grandTotal = Array.from(totals.values()).reduce((sum, v) => sum + v.amount, 0)
+  // Only include categories with net spending (negative sum)
+  const items = Array.from(totals.entries())
+    .filter(([, data]) => data.amount < 0)
+    .map(([catId, data]) => ({
+      catId,
+      amount: Math.abs(data.amount),
+      count: data.count,
+    }))
 
-  return Array.from(totals.entries())
-    .map(([catId, data]) => {
+  const grandTotal = items.reduce((sum, v) => sum + v.amount, 0)
+
+  return items
+    .map(({ catId, amount, count }) => {
       const cat = catMap.get(catId)
       return {
         categoryId: catId,
         categoryName: cat?.name ?? 'Uncategorized',
         color: cat?.color ?? '#BDBDBD',
-        amount: data.amount,
-        percentage: grandTotal > 0 ? (data.amount / grandTotal) * 100 : 0,
-        transactionCount: data.count,
+        amount,
+        percentage: grandTotal > 0 ? (amount / grandTotal) * 100 : 0,
+        transactionCount: count,
       }
     })
     .sort((a, b) => b.amount - a.amount)

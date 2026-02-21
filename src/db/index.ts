@@ -141,7 +141,7 @@ export class FinanceDB extends Dexie {
       // Clear categoryId on transactions pointing to Uncategorized or non-existent categories
       await tx.table('transactions').toCollection().modify((t: Transaction) => {
         if (t.categoryId != null && (uncatIds.includes(t.categoryId) || !validCatIds.has(t.categoryId))) {
-          delete (t as Record<string, unknown>).categoryId
+          delete (t as unknown as Record<string, unknown>).categoryId
         }
       })
 

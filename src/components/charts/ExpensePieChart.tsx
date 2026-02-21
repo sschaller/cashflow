@@ -54,7 +54,7 @@ export function ExpensePieChart({ data, currency, onCategoryClick, bare }: Expen
   }
 
   return (
-    <ChartContainer title="Expenses by Category" empty={data.length === 0} bare={bare}>
+    <ChartContainer title="Net Expenses by Category" empty={data.length === 0} bare={bare}>
       <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:justify-center sm:gap-10">
         <div className="h-72 w-72 shrink-0">
           <Doughnut data={chartData} options={options} />
