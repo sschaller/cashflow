@@ -9,7 +9,7 @@ ChartJS.register(ArcElement, Tooltip, Legend)
 interface ExpensePieChartProps {
   data: CategoryBreakdownItem[]
   currency: string | null
-  onCategoryClick?: (categoryId: number) => void
+  onCategoryClick?: (categoryId: string) => void
   bare?: boolean
 }
 

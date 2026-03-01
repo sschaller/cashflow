@@ -23,7 +23,7 @@ export function ImportWizard() {
   const [file, setFile] = useState<File | null>(null)
   const [parseResult, setParseResult] = useState<ParseResult | null>(null)
   const [accounts, setAccounts] = useState<Account[]>([])
-  const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null)
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
   const [columnMapping, setColumnMapping] = useState<ColumnMapping>({
     date: '',
     amount: '',

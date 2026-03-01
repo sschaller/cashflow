@@ -173,7 +173,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   syncVersion: parseInt(localStorage.getItem('sync:syncVersion') ?? '0', 10),
 
   isSyncEnabled: localStorage.getItem('sync:enabled') === 'true',
-  autoSyncInterval: 5 * 60 * 1000,
+  autoSyncInterval: 30 * 1000,
 
   signIn: () => {
     return new Promise<void>(async (resolve, reject) => {
@@ -272,9 +272,9 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     if (!state.accessToken) throw new Error('Not authenticated')
 
     const drive = new GoogleDriveClient(async () => get().accessToken!)
-    const fileId = await drive.findSyncFile()
+    const remoteFile = await drive.findSyncFile()
 
-    if (!fileId) {
+    if (!remoteFile) {
       // No remote file — treat as new setup
       const salt = generateSalt()
       const cryptoKey = await deriveKey(passphrase, salt)
@@ -283,7 +283,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     }
 
     // Download and try to decrypt with provided passphrase
-    const encryptedText = await drive.downloadSyncFile(fileId)
+    const { content: encryptedText } = await drive.downloadSyncFile(remoteFile.fileId)
     const payload: EncryptedPayload = JSON.parse(encryptedText)
 
     const { fromBase64 } = await import('@/services/crypto.ts')
@@ -386,9 +386,9 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     if (!state.accessToken) throw new Error('Not authenticated')
 
     const drive = new GoogleDriveClient(async () => get().accessToken!)
-    const fileId = await drive.findSyncFile()
-    if (fileId) {
-      await drive.deleteSyncFile(fileId)
+    const remoteFile = await drive.findSyncFile()
+    if (remoteFile) {
+      await drive.deleteSyncFile(remoteFile.fileId)
     }
 
     localStorage.removeItem('sync:lastSyncAt')

@@ -6,16 +6,16 @@ import toast from 'react-hot-toast'
 
 interface CategoryTreeProps {
   onSelect?: (category: Category) => void
-  selectedId?: number
+  selectedId?: string
 }
 
 export function CategoryTree({ onSelect, selectedId }: CategoryTreeProps) {
   const repos = useRepositories()
   const [categories, setCategories] = useState<Category[]>([])
-  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [editColor, setEditColor] = useState('#4CAF50')
-  const [addingParentId, setAddingParentId] = useState<number | null | 'top'>(null)
+  const [addingParentId, setAddingParentId] = useState<string | null | 'top'>(null)
   const [newName, setNewName] = useState('')
   const [newColor, setNewColor] = useState('#4CAF50')
 
@@ -26,7 +26,7 @@ export function CategoryTree({ onSelect, selectedId }: CategoryTreeProps) {
   useEffect(() => { loadCategories() }, [repos])
 
   const topLevel = categories.filter((c) => c.parentId === null)
-  const getChildren = (parentId: number) => categories.filter((c) => c.parentId === parentId)
+  const getChildren = (parentId: string) => categories.filter((c) => c.parentId === parentId)
 
   const handleSaveEdit = async () => {
     if (!editingId || !editName.trim()) return
@@ -35,7 +35,7 @@ export function CategoryTree({ onSelect, selectedId }: CategoryTreeProps) {
     loadCategories()
   }
 
-  const handleAddCategory = async (parentId: number | null) => {
+  const handleAddCategory = async (parentId: string | null) => {
     if (!newName.trim()) return
     const maxSort = categories
       .filter((c) => c.parentId === parentId)

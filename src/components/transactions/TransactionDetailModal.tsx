@@ -18,7 +18,7 @@ interface TransactionDetailModalProps {
 
 export function TransactionDetailModal({ transaction, onClose, categories, currency = 'USD' }: TransactionDetailModalProps) {
   const repos = useRepositories()
-  const [categoryId, setCategoryId] = useState<number | undefined>(undefined)
+  const [categoryId, setCategoryId] = useState<string | undefined>(undefined)
   const [displayDescription, setDisplayDescription] = useState('')
   const [notes, setNotes] = useState('')
   const [tags, setTags] = useState('')
@@ -78,7 +78,7 @@ export function TransactionDetailModal({ transaction, onClose, categories, curre
       operator: 'contains',
       value: transaction.normalizedDescription.split(/\s+/).slice(0, 3).join(' '),
     }],
-    categoryId: categoryId ?? (categories[0]?.id ?? 0),
+    categoryId: categoryId ?? categories[0]?.id,
     priority: 100,
     isEnabled: true,
   } as unknown as Rule : undefined
@@ -171,7 +171,7 @@ export function TransactionDetailModal({ transaction, onClose, categories, curre
             <select
               className={selectClass}
               value={categoryId ?? ''}
-              onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : undefined)}
+              onChange={(e) => setCategoryId(e.target.value || undefined)}
             >
               <option value="">Uncategorized</option>
               {leafCategories.map((c) => (

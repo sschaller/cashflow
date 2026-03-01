@@ -15,7 +15,7 @@ import type { Rule } from '@/types/models.ts'
 import toast from 'react-hot-toast'
 
 interface UndoEntry {
-  transactionId: number
+  transactionId: string
   previousCategoryId: undefined
   previousIsManual: false
 }
@@ -26,7 +26,7 @@ export default function CategorizePage() {
   const uncategorized = useUncategorizedTransactions()
   const categories = useCategories()
   const accounts = useAccounts()
-  const [skippedIds, setSkippedIds] = useState<Set<number>>(new Set())
+  const [skippedIds, setSkippedIds] = useState<Set<string>>(new Set())
   const [undoStack, setUndoStack] = useState<UndoEntry[]>([])
   const [showRuleForm, setShowRuleForm] = useState(false)
   const pickerRef = useRef<CategoryPickerHandle>(null)
@@ -51,7 +51,7 @@ export default function CategorizePage() {
   const currentCurrency = currentAccount?.currency ?? 'USD'
 
   const handleSelect = useCallback(
-    async (categoryId: number) => {
+    async (categoryId: string) => {
       if (!currentTx) return
       setUndoStack((prev) => [
         ...prev,
@@ -109,7 +109,7 @@ export default function CategorizePage() {
               value: currentTx.normalizedDescription.split(/\s+/).slice(0, 3).join(' '),
             },
           ],
-          categoryId: categories[0]?.id ?? 0,
+          categoryId: categories[0]?.id,
           priority: 100,
           isEnabled: true,
         } as unknown as Rule)

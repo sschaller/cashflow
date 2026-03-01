@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
 import type { Account, Transaction } from '@/types/models.ts'
 
-export function useCurrencyLookup(accounts: Account[]): Map<number, string> {
+export function useCurrencyLookup(accounts: Account[]): Map<string, string> {
   return useMemo(() => {
-    const map = new Map<number, string>()
+    const map = new Map<string, string>()
     for (const a of accounts) {
       if (a.id != null) map.set(a.id, a.currency)
     }
@@ -13,7 +13,7 @@ export function useCurrencyLookup(accounts: Account[]): Map<number, string> {
 
 export function getUniqueCurrency(
   transactions: Transaction[],
-  currencyMap: Map<number, string>,
+  currencyMap: Map<string, string>,
 ): string | null {
   const currencies = new Set<string>()
   for (const t of transactions) {

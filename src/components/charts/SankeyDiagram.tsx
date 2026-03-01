@@ -9,7 +9,7 @@ interface SankeyDiagramProps {
   categories: Category[]
   currency: string | null
   bare?: boolean
-  onCategoryClick?: (categoryId: number) => void
+  onCategoryClick?: (categoryId: string) => void
 }
 
 interface SNode {
@@ -28,7 +28,7 @@ export function SankeyDiagram({ transactions, categories, currency, bare, onCate
   const svgRef = useRef<SVGSVGElement>(null)
 
   const catMap = useMemo(() => {
-    const m = new Map<number, Category>()
+    const m = new Map<string, Category>()
     for (const c of categories) m.set(c.id!, c)
     return m
   }, [categories])
@@ -56,7 +56,7 @@ export function SankeyDiagram({ transactions, categories, currency, bare, onCate
 
     for (const tx of transactions) {
       const cat = tx.categoryId ? catMap.get(tx.categoryId) : undefined
-      const catId = cat?.id ?? 0
+      const catId = cat?.id ?? '_uncategorized'
 
       if (tx.amount > 0) {
         // Income: income-cat → Budget
@@ -173,10 +173,10 @@ export function SankeyDiagram({ transactions, categories, currency, bare, onCate
 
       // Parse node ID to determine click behavior
       const nodeId = node.id ?? ''
-      const catMatch = nodeId.match(/^(?:income-cat|expense-cat|expense-subcat)-(\d+)$/)
+      const catMatch = nodeId.match(/^(?:income-cat|expense-cat|expense-subcat)-(.+)$/)
       if (catMatch && onCategoryClick) {
         rect.style.cursor = 'pointer'
-        const id = Number(catMatch[1])
+        const id = catMatch[1]
         rect.addEventListener('click', () => onCategoryClick(id))
       }
 

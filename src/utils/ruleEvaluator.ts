@@ -84,7 +84,7 @@ export function extractRegexCaptures(transaction: Transaction, rule: Rule): RegE
     if (condition.field !== 'description' || condition.operator !== 'regex') continue
     const re = getCachedRegex(condition.value)
     if (!re) continue
-    const match = transaction.description.match(re)
+    const match = transaction.normalizedDescription.match(re)
     if (match) return match
   }
   return null

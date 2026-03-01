@@ -7,7 +7,7 @@ const GRID_COLS = 3
 
 interface CategoryPickerProps {
   categories: Category[]
-  onSelect: (categoryId: number) => void
+  onSelect: (categoryId: string) => void
 }
 
 export interface CategoryPickerHandle {
@@ -28,7 +28,7 @@ export const CategoryPicker = forwardRef<CategoryPickerHandle, CategoryPickerPro
 
     // Count transactions per category for popularity sorting
     const categoryCounts = useLiveQuery(async () => {
-      const counts = new Map<number, number>()
+      const counts = new Map<string, number>()
       await db.transactions.each((tx) => {
         if (tx.categoryId != null) {
           counts.set(tx.categoryId, (counts.get(tx.categoryId) ?? 0) + 1)
@@ -41,7 +41,7 @@ export const CategoryPicker = forwardRef<CategoryPickerHandle, CategoryPickerPro
     const parentIds = new Set(categories.filter((c) => c.parentId !== null).map((c) => c.parentId))
     const leafCategories = useMemo(() => {
       const leaves = categories.filter((c) => !parentIds.has(c.id!))
-      const counts = categoryCounts ?? new Map<number, number>()
+      const counts = categoryCounts ?? new Map<string, number>()
       return leaves.sort((a, b) => {
         const countDiff = (counts.get(b.id!) ?? 0) - (counts.get(a.id!) ?? 0)
         if (countDiff !== 0) return countDiff

@@ -14,7 +14,7 @@ export function useTransactions() {
       results = results.filter((t) => t.accountId === filters.accountId)
     }
     if (filters.categoryId !== undefined) {
-      if (filters.categoryId === 0) {
+      if (filters.categoryId === '_uncategorized') {
         results = results.filter((t) => t.categoryId == null)
       } else {
         results = results.filter((t) => t.categoryId === filters.categoryId)

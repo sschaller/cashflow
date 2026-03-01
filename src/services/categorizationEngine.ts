@@ -4,7 +4,7 @@ import { evaluateRule, extractRegexCaptures } from '@/utils/ruleEvaluator.ts'
 import { db } from '@/db/index.ts'
 
 export interface RuleResult {
-  categoryId?: number
+  categoryId?: string
   displayDescription?: string
 }
 
@@ -58,7 +58,7 @@ export function applyRules(
 export function categorizeTransaction(
   transaction: Transaction,
   rules: Rule[]
-): number | null {
+): string | null {
   // Never overwrite manual assignments
   if (transaction.isManualCategory && transaction.categoryId) {
     return transaction.categoryId
@@ -75,9 +75,9 @@ export function categorizeTransaction(
 export function reapplyRules(
   transactions: Transaction[],
   rules: Rule[]
-): Map<number, Partial<Transaction>> {
+): Map<string, Partial<Transaction>> {
   const sorted = [...rules].sort((a, b) => a.priority - b.priority)
-  const updates = new Map<number, Partial<Transaction>>()
+  const updates = new Map<string, Partial<Transaction>>()
 
   for (const tx of transactions) {
     // Skip transactions where both category and description are manually set
@@ -108,8 +108,8 @@ export function reapplyRules(
 export function recategorizeTransactions(
   transactions: Transaction[],
   rules: Rule[]
-): Map<number, number | undefined> {
-  const updates = new Map<number, number | undefined>()
+): Map<string, string | undefined> {
+  const updates = new Map<string, string | undefined>()
 
   for (const tx of transactions) {
     if (tx.isManualCategory) continue

@@ -40,10 +40,10 @@ export function TransactionFilters({ categories, accounts }: TransactionFiltersP
       <select
         className={selectClass}
         value={filters.categoryId ?? ''}
-        onChange={(e) => setFilter('categoryId', e.target.value ? Number(e.target.value) : undefined)}
+        onChange={(e) => setFilter('categoryId', e.target.value || undefined)}
       >
         <option value="">All categories</option>
-        <option value="0">Uncategorized</option>
+        <option value="_uncategorized">Uncategorized</option>
         {categories.map((c) => (
           <option key={c.id} value={c.id}>{c.name}</option>
         ))}
@@ -52,7 +52,7 @@ export function TransactionFilters({ categories, accounts }: TransactionFiltersP
       <select
         className={selectClass}
         value={filters.accountId ?? ''}
-        onChange={(e) => setFilter('accountId', e.target.value ? Number(e.target.value) : undefined)}
+        onChange={(e) => setFilter('accountId', e.target.value || undefined)}
       >
         <option value="">All accounts</option>
         {accounts.map((a) => (

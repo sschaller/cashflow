@@ -2,12 +2,36 @@ import Dexie from 'dexie'
 import type { Table } from 'dexie'
 import type { Account, Transaction, Category, Rule, ImportProfile } from '@/types/models.ts'
 
+// --- Change notification system (Phase 4) ---
+
+type ChangeListener = () => void
+const changeListeners: Set<ChangeListener> = new Set()
+let syncApplying = false
+
+export function onDatabaseChange(listener: ChangeListener): () => void {
+  changeListeners.add(listener)
+  return () => { changeListeners.delete(listener) }
+}
+
+export function setSyncApplying(flag: boolean): void {
+  syncApplying = flag
+}
+
+function notifyChange(): void {
+  if (syncApplying) return
+  for (const listener of changeListeners) {
+    listener()
+  }
+}
+
+// --- Database ---
+
 export class FinanceDB extends Dexie {
-  accounts!: Table<Account, number>
-  transactions!: Table<Transaction, number>
-  categories!: Table<Category, number>
-  rules!: Table<Rule, number>
-  importProfiles!: Table<ImportProfile, number>
+  accounts!: Table<Account, string>
+  transactions!: Table<Transaction, string>
+  categories!: Table<Category, string>
+  rules!: Table<Rule, string>
+  importProfiles!: Table<ImportProfile, string>
 
   constructor() {
     super('FinanceDB')
@@ -135,11 +159,11 @@ export class FinanceDB extends Dexie {
       importProfiles: '++id, name, accountId, updatedAt',
     }).upgrade(async tx => {
       const cats = await tx.table('categories').toArray()
-      const uncatIds = cats.filter((c: Category) => c.isSystem && c.name === 'Uncategorized').map((c: Category) => c.id!)
-      const validCatIds = new Set(cats.map((c: Category) => c.id!))
+      const uncatIds = cats.filter((c: { isSystem: boolean; name: string; id: number }) => c.isSystem && c.name === 'Uncategorized').map((c: { id: number }) => c.id)
+      const validCatIds = new Set(cats.map((c: { id: number }) => c.id))
 
       // Clear categoryId on transactions pointing to Uncategorized or non-existent categories
-      await tx.table('transactions').toCollection().modify((t: Transaction) => {
+      await tx.table('transactions').toCollection().modify((t: { categoryId?: number }) => {
         if (t.categoryId != null && (uncatIds.includes(t.categoryId) || !validCatIds.has(t.categoryId))) {
           delete (t as unknown as Record<string, unknown>).categoryId
         }
@@ -151,15 +175,114 @@ export class FinanceDB extends Dexie {
       }
     })
 
-    // Auto-set updatedAt on every write
+    // Version 6: Migrate from auto-increment numeric IDs to string UUIDs
+    // Keep ++id schema — Dexie doesn't support changing primary keys.
+    // The ++ auto-increment is harmless since our repos always provide UUID ids.
+    this.version(6).stores({
+      accounts: '++id, name, type, isActive, updatedAt',
+      transactions: '++id, [accountId+date], [categoryId+date], hash, date, type, accountId, categoryId, updatedAt',
+      categories: '++id, parentId, name, sortOrder, updatedAt',
+      rules: '++id, categoryId, priority, isEnabled, updatedAt',
+      importProfiles: '++id, name, accountId, updatedAt',
+    }).upgrade(async tx => {
+      // Build a global oldId → UUID map for all tables
+      const idMaps = {
+        accounts: new Map<number, string>(),
+        categories: new Map<number, string>(),
+        rules: new Map<number, string>(),
+        importProfiles: new Map<number, string>(),
+        transactions: new Map<number, string>(),
+      }
+
+      // Read all records from all tables
+      const [accounts, transactions, categories, rules, importProfiles] = await Promise.all([
+        tx.table('accounts').toArray(),
+        tx.table('transactions').toArray(),
+        tx.table('categories').toArray(),
+        tx.table('rules').toArray(),
+        tx.table('importProfiles').toArray(),
+      ])
+
+      // Generate UUIDs for all records
+      for (const rec of accounts) {
+        idMaps.accounts.set(rec.id, crypto.randomUUID())
+      }
+      for (const rec of categories) {
+        idMaps.categories.set(rec.id, crypto.randomUUID())
+      }
+      for (const rec of rules) {
+        idMaps.rules.set(rec.id, crypto.randomUUID())
+      }
+      for (const rec of importProfiles) {
+        idMaps.importProfiles.set(rec.id, crypto.randomUUID())
+      }
+      for (const rec of transactions) {
+        idMaps.transactions.set(rec.id, crypto.randomUUID())
+      }
+
+      // Clear all tables
+      await Promise.all([
+        tx.table('accounts').clear(),
+        tx.table('transactions').clear(),
+        tx.table('categories').clear(),
+        tx.table('rules').clear(),
+        tx.table('importProfiles').clear(),
+      ])
+
+      // Re-insert with remapped IDs and FKs
+      if (accounts.length) {
+        await tx.table('accounts').bulkAdd(accounts.map((rec: Record<string, unknown>) => ({
+          ...rec,
+          id: idMaps.accounts.get(rec.id as number),
+        })))
+      }
+
+      if (categories.length) {
+        await tx.table('categories').bulkAdd(categories.map((rec: Record<string, unknown>) => ({
+          ...rec,
+          id: idMaps.categories.get(rec.id as number),
+          parentId: rec.parentId != null ? (idMaps.categories.get(rec.parentId as number) ?? null) : null,
+        })))
+      }
+
+      if (rules.length) {
+        await tx.table('rules').bulkAdd(rules.map((rec: Record<string, unknown>) => ({
+          ...rec,
+          id: idMaps.rules.get(rec.id as number),
+          categoryId: rec.categoryId != null ? idMaps.categories.get(rec.categoryId as number) : undefined,
+        })))
+      }
+
+      if (importProfiles.length) {
+        await tx.table('importProfiles').bulkAdd(importProfiles.map((rec: Record<string, unknown>) => ({
+          ...rec,
+          id: idMaps.importProfiles.get(rec.id as number),
+          accountId: idMaps.accounts.get(rec.accountId as number) ?? rec.accountId,
+        })))
+      }
+
+      if (transactions.length) {
+        await tx.table('transactions').bulkAdd(transactions.map((rec: Record<string, unknown>) => ({
+          ...rec,
+          id: idMaps.transactions.get(rec.id as number),
+          accountId: idMaps.accounts.get(rec.accountId as number) ?? rec.accountId,
+          categoryId: rec.categoryId != null ? idMaps.categories.get(rec.categoryId as number) : undefined,
+          importProfileId: rec.importProfileId != null ? idMaps.importProfiles.get(rec.importProfileId as number) : undefined,
+        })))
+      }
+    })
+
+    // Auto-set updatedAt on every write + notify change listeners
     const tables = [this.accounts, this.transactions, this.categories, this.rules, this.importProfiles]
     for (const table of tables) {
       table.hook('creating', (_primKey, obj) => {
         if (!obj.updatedAt) {
           obj.updatedAt = new Date().toISOString()
         }
+        notifyChange()
       })
       table.hook('updating', (modifications) => {
+        notifyChange()
         if (!('updatedAt' in modifications)) {
           return { ...modifications, updatedAt: new Date().toISOString() }
         }

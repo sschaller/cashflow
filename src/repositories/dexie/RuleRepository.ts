@@ -7,23 +7,27 @@ export class DexieRuleRepository implements IRuleRepository {
     return db.rules.orderBy('priority').toArray()
   }
 
-  async getById(id: number): Promise<Rule | undefined> {
+  async getById(id: string): Promise<Rule | undefined> {
     return db.rules.get(id)
   }
 
-  async add(item: Omit<Rule, 'id'>): Promise<number> {
-    return db.rules.add(item as Rule)
+  async add(item: Omit<Rule, 'id'>): Promise<string> {
+    const id = crypto.randomUUID()
+    await db.rules.add({ ...item, id } as Rule)
+    return id
   }
 
-  async bulkAdd(items: Omit<Rule, 'id'>[]): Promise<number[]> {
-    return db.rules.bulkAdd(items as Rule[], { allKeys: true })
+  async bulkAdd(items: Omit<Rule, 'id'>[]): Promise<string[]> {
+    const withIds = items.map(item => ({ ...item, id: crypto.randomUUID() })) as Rule[]
+    await db.rules.bulkAdd(withIds)
+    return withIds.map(item => item.id!)
   }
 
-  async update(id: number, changes: Partial<Rule>): Promise<void> {
+  async update(id: string, changes: Partial<Rule>): Promise<void> {
     await db.rules.update(id, changes)
   }
 
-  async delete(id: number): Promise<void> {
+  async delete(id: string): Promise<void> {
     await db.rules.delete(id)
   }
 
@@ -35,7 +39,7 @@ export class DexieRuleRepository implements IRuleRepository {
     return db.rules.filter((r) => r.isEnabled).sortBy('priority')
   }
 
-  async getByCategoryId(categoryId: number): Promise<Rule[]> {
+  async getByCategoryId(categoryId: string): Promise<Rule[]> {
     return db.rules.where('categoryId').equals(categoryId).toArray()
   }
 }

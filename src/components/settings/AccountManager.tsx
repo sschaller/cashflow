@@ -57,7 +57,7 @@ export function AccountManager() {
     setCurrency(account.currency)
   }
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     const txCount = (await repos.transactions.getByAccountId(id)).length
     if (txCount > 0) {
       toast.error(`Cannot delete: ${txCount} transactions linked to this account`)

@@ -18,13 +18,13 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 interface CategoryStackedBarProps {
   data: MonthlyCategoryTotal[]
   currency: string | null
-  onSegmentClick?: (categoryId: number, month: string) => void
+  onSegmentClick?: (categoryId: string, month: string) => void
   bare?: boolean
 }
 
 export function CategoryStackedBar({ data, currency, onSegmentClick, bare }: CategoryStackedBarProps) {
   // Collect all unique categories across all months
-  const categoryMap = new Map<number, { name: string; color: string }>()
+  const categoryMap = new Map<string, { name: string; color: string }>()
   for (const m of data) {
     for (const c of m.categories) {
       if (!categoryMap.has(c.categoryId)) {

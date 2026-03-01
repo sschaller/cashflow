@@ -1,7 +1,7 @@
 import type { AccountType, TransactionType, ImportFormat, RuleOperator, RuleField } from './enums.ts'
 
 export interface Account {
-  id?: number
+  id?: string
   name: string
   type: AccountType
   institution: string
@@ -14,14 +14,14 @@ export interface Account {
 }
 
 export interface Transaction {
-  id?: number
+  id?: string
   date: string
   amount: number
   description: string
   normalizedDescription: string
   displayDescription?: string
-  accountId: number
-  categoryId?: number
+  accountId: string
+  categoryId?: string
   type: TransactionType
   tags: string[]
   notes: string
@@ -29,7 +29,7 @@ export interface Transaction {
   hash: string
   isManualCategory: boolean
   isManualDescription?: boolean
-  importProfileId?: number
+  importProfileId?: string
   importedAt: string
   updatedAt?: string
   _syncVersion?: number
@@ -37,9 +37,9 @@ export interface Transaction {
 }
 
 export interface Category {
-  id?: number
+  id?: string
   name: string
-  parentId: number | null
+  parentId: string | null
   color: string
   icon: string
   isSystem: boolean
@@ -57,10 +57,10 @@ export interface RuleCondition {
 }
 
 export interface Rule {
-  id?: number
+  id?: string
   name: string
   conditions: RuleCondition[]
-  categoryId?: number
+  categoryId?: string
   displayDescription?: string
   priority: number
   isEnabled: boolean
@@ -87,10 +87,10 @@ export interface AmountConfig {
 }
 
 export interface ImportProfile {
-  id?: number
+  id?: string
   name: string
   format: ImportFormat
-  accountId: number
+  accountId: string
   columnMapping: ColumnMapping
   dateFormat: string
   amountConfig: AmountConfig

@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 
 interface CategoryStoreState {
-  selectedCategoryId: number | null
-  setSelectedCategoryId: (id: number | null) => void
+  selectedCategoryId: string | null
+  setSelectedCategoryId: (id: string | null) => void
 }
 
 export const useCategoryStore = create<CategoryStoreState>((set) => ({

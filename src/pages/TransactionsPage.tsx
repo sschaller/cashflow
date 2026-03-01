@@ -34,7 +34,7 @@ export default function TransactionsPage() {
     return () => resetFilters()
   }, [startDate, endDate, setFilters, resetFilters])
 
-  const handleCategoryChange = async (transactionId: number, categoryId: number | undefined) => {
+  const handleCategoryChange = async (transactionId: string, categoryId: string | undefined) => {
     await repos.transactions.update(transactionId, { categoryId, isManualCategory: true })
   }
 

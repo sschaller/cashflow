@@ -1,5 +1,5 @@
 export interface CategoryBreakdownItem {
-  categoryId: number
+  categoryId: string
   categoryName: string
   color: string
   amount: number
@@ -32,7 +32,7 @@ export interface SankeyData {
 
 export interface MonthlyCategoryTotal {
   month: string
-  categories: { categoryId: number; categoryName: string; color: string; amount: number }[]
+  categories: { categoryId: string; categoryName: string; color: string; amount: number }[]
 }
 
 export interface DashboardSummary {

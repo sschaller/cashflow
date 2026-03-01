@@ -6,13 +6,13 @@ export function sumByCategory(
   transactions: Transaction[],
   categories: Category[]
 ): CategoryBreakdownItem[] {
-  const catMap = new Map<number, Category>()
+  const catMap = new Map<string, Category>()
   for (const c of categories) catMap.set(c.id!, c)
 
-  const totals = new Map<number, { amount: number; count: number }>()
+  const totals = new Map<string, { amount: number; count: number }>()
 
   for (const tx of transactions) {
-    const catId = tx.categoryId ?? 0
+    const catId = tx.categoryId ?? '_uncategorized'
     const existing = totals.get(catId) ?? { amount: 0, count: 0 }
     existing.amount += tx.amount
     existing.count++
@@ -68,23 +68,23 @@ export function monthlyCategoryTotals(
   transactions: Transaction[],
   categories: Category[]
 ): MonthlyCategoryTotal[] {
-  const catMap = new Map<number, Category>()
+  const catMap = new Map<string, Category>()
   for (const c of categories) catMap.set(c.id!, c)
 
   const expenses = transactions.filter((t) => t.amount < 0)
 
   // Aggregate by month+category
-  const monthCatMap = new Map<string, Map<number, number>>()
+  const monthCatMap = new Map<string, Map<string, number>>()
   for (const tx of expenses) {
     const month = format(parseISO(tx.date), 'yyyy-MM')
-    const catId = tx.categoryId ?? 0
+    const catId = tx.categoryId ?? '_uncategorized'
     if (!monthCatMap.has(month)) monthCatMap.set(month, new Map())
     const cats = monthCatMap.get(month)!
     cats.set(catId, (cats.get(catId) ?? 0) + Math.abs(tx.amount))
   }
 
   // Determine top 8 categories by total amount across all months
-  const catTotals = new Map<number, number>()
+  const catTotals = new Map<string, number>()
   for (const cats of monthCatMap.values()) {
     for (const [catId, amount] of cats) {
       catTotals.set(catId, (catTotals.get(catId) ?? 0) + amount)
@@ -114,7 +114,7 @@ export function monthlyCategoryTotals(
       }
 
       if (otherAmount > 0) {
-        catEntries.push({ categoryId: -1, categoryName: 'Other', color: '#9E9E9E', amount: otherAmount })
+        catEntries.push({ categoryId: '_other', categoryName: 'Other', color: '#9E9E9E', amount: otherAmount })
       }
 
       catEntries.sort((a, b) => b.amount - a.amount)

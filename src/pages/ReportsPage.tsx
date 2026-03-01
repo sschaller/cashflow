@@ -77,11 +77,11 @@ export default function ReportsPage() {
     setFilters({ startDate, endDate })
   }, [startDate, endDate, resetFilters, setFilters])
 
-  const handleCategoryChange = async (transactionId: number, categoryId: number | undefined) => {
+  const handleCategoryChange = async (transactionId: string, categoryId: string | undefined) => {
     await repos.transactions.update(transactionId, { categoryId, isManualCategory: true })
   }
 
-  const handleCategoryClick = (categoryId: number) => {
+  const handleCategoryClick = (categoryId: string) => {
     setFilter('categoryId', categoryId)
   }
 
@@ -92,7 +92,7 @@ export default function ReportsPage() {
     setFilters({ startDate: ms, endDate: me })
   }
 
-  const handleStackedSegmentClick = (categoryId: number, month: string) => {
+  const handleStackedSegmentClick = (categoryId: string, month: string) => {
     const date = parseISO(month + '-01')
     const ms = format(startOfMonth(date), 'yyyy-MM-dd')
     const me = format(endOfMonth(date), 'yyyy-MM-dd')

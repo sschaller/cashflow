@@ -7,23 +7,27 @@ export class DexieImportProfileRepository implements IImportProfileRepository {
     return db.importProfiles.toArray()
   }
 
-  async getById(id: number): Promise<ImportProfile | undefined> {
+  async getById(id: string): Promise<ImportProfile | undefined> {
     return db.importProfiles.get(id)
   }
 
-  async add(item: Omit<ImportProfile, 'id'>): Promise<number> {
-    return db.importProfiles.add(item as ImportProfile)
+  async add(item: Omit<ImportProfile, 'id'>): Promise<string> {
+    const id = crypto.randomUUID()
+    await db.importProfiles.add({ ...item, id } as ImportProfile)
+    return id
   }
 
-  async bulkAdd(items: Omit<ImportProfile, 'id'>[]): Promise<number[]> {
-    return db.importProfiles.bulkAdd(items as ImportProfile[], { allKeys: true })
+  async bulkAdd(items: Omit<ImportProfile, 'id'>[]): Promise<string[]> {
+    const withIds = items.map(item => ({ ...item, id: crypto.randomUUID() })) as ImportProfile[]
+    await db.importProfiles.bulkAdd(withIds)
+    return withIds.map(item => item.id!)
   }
 
-  async update(id: number, changes: Partial<ImportProfile>): Promise<void> {
+  async update(id: string, changes: Partial<ImportProfile>): Promise<void> {
     await db.importProfiles.update(id, changes)
   }
 
-  async delete(id: number): Promise<void> {
+  async delete(id: string): Promise<void> {
     await db.importProfiles.delete(id)
   }
 
@@ -31,7 +35,7 @@ export class DexieImportProfileRepository implements IImportProfileRepository {
     return db.importProfiles.count()
   }
 
-  async getByAccountId(accountId: number): Promise<ImportProfile[]> {
+  async getByAccountId(accountId: string): Promise<ImportProfile[]> {
     return db.importProfiles.where('accountId').equals(accountId).toArray()
   }
 }

@@ -7,24 +7,27 @@ export class DexieTransactionRepository implements ITransactionRepository {
     return db.transactions.toArray()
   }
 
-  async getById(id: number): Promise<Transaction | undefined> {
+  async getById(id: string): Promise<Transaction | undefined> {
     return db.transactions.get(id)
   }
 
-  async add(item: Omit<Transaction, 'id'>): Promise<number> {
-    return db.transactions.add(item as Transaction)
+  async add(item: Omit<Transaction, 'id'>): Promise<string> {
+    const id = crypto.randomUUID()
+    await db.transactions.add({ ...item, id } as Transaction)
+    return id
   }
 
-  async bulkAdd(items: Omit<Transaction, 'id'>[]): Promise<number[]> {
-    const ids = await db.transactions.bulkAdd(items as Transaction[], { allKeys: true })
-    return ids
+  async bulkAdd(items: Omit<Transaction, 'id'>[]): Promise<string[]> {
+    const withIds = items.map(item => ({ ...item, id: crypto.randomUUID() })) as Transaction[]
+    await db.transactions.bulkAdd(withIds)
+    return withIds.map(item => item.id!)
   }
 
-  async update(id: number, changes: Partial<Transaction>): Promise<void> {
+  async update(id: string, changes: Partial<Transaction>): Promise<void> {
     await db.transactions.update(id, changes)
   }
 
-  async delete(id: number): Promise<void> {
+  async delete(id: string): Promise<void> {
     await db.transactions.delete(id)
   }
 
@@ -32,11 +35,11 @@ export class DexieTransactionRepository implements ITransactionRepository {
     return db.transactions.count()
   }
 
-  async getByAccountId(accountId: number): Promise<Transaction[]> {
+  async getByAccountId(accountId: string): Promise<Transaction[]> {
     return db.transactions.where('accountId').equals(accountId).toArray()
   }
 
-  async getByCategoryId(categoryId: number): Promise<Transaction[]> {
+  async getByCategoryId(categoryId: string): Promise<Transaction[]> {
     return db.transactions.where('categoryId').equals(categoryId).toArray()
   }
 

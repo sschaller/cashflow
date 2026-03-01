@@ -17,9 +17,9 @@ export function ImportProfileManager() {
 
   useEffect(() => { load() }, [repos])
 
-  const getAccountName = (id: number) => accounts.find((a) => a.id === id)?.name ?? 'Unknown'
+  const getAccountName = (id: string) => accounts.find((a) => a.id === id)?.name ?? 'Unknown'
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     await repos.importProfiles.delete(id)
     toast.success('Profile deleted')
     load()

@@ -4,6 +4,7 @@ export interface SyncSnapshot {
   version: number
   syncVersion: number
   timestamp: string
+  idFormat?: 'uuid' | 'numeric'
   accounts: Account[]
   transactions: Transaction[]
   categories: Category[]

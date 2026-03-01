@@ -6,11 +6,11 @@ import { computeHash } from '@/utils/fileHelpers.ts'
 import { applyRules } from './categorizationEngine.ts'
 
 export interface ImportOptions {
-  accountId: number
+  accountId: string
   columnMapping: ColumnMapping
   dateFormat: string
   amountConfig: AmountConfig
-  importProfileId?: number
+  importProfileId?: string
 }
 
 export interface ImportResult {

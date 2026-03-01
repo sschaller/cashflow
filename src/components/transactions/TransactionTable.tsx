@@ -17,15 +17,15 @@ import { getUniqueCurrency } from '@/hooks/useCurrencyLookup.ts'
 interface TransactionTableProps {
   transactions: Transaction[]
   categories: Category[]
-  currencyMap?: Map<number, string>
+  currencyMap?: Map<string, string>
   onSelect?: (transaction: Transaction) => void
-  onCategoryChange?: (transactionId: number, categoryId: number | undefined) => void
+  onCategoryChange?: (transactionId: string, categoryId: string | undefined) => void
 }
 
 function CategoryCell({ cat, categories, onChange }: {
   cat: Category | undefined
   categories: Category[]
-  onChange: (categoryId: number | undefined) => void
+  onChange: (categoryId: string | undefined) => void
 }) {
   const [open, setOpen] = useState(false)
   const [filter, setFilter] = useState('')
@@ -54,7 +54,7 @@ function CategoryCell({ cat, categories, onChange }: {
 
   // Build flat options list: "Uncategorized" (only when no filter) + filtered categories
   const options = useMemo(() => {
-    const items: { id: number | undefined; name: string; color?: string }[] = []
+    const items: { id: string | undefined; name: string; color?: string }[] = []
     if (!filter) items.push({ id: undefined, name: 'Uncategorized' })
     for (const c of filtered) items.push({ id: c.id!, name: c.name, color: c.color })
     return items
@@ -72,7 +72,7 @@ function CategoryCell({ cat, categories, onChange }: {
     el?.scrollIntoView({ block: 'nearest' })
   }, [highlightIdx])
 
-  const selectOption = (opt: { id: number | undefined }) => {
+  const selectOption = (opt: { id: string | undefined }) => {
     onChange(opt.id)
     setOpen(false)
   }
@@ -165,7 +165,7 @@ export function TransactionTable({ transactions, categories, currencyMap, onSele
   const [sorting, setSorting] = useState<SortingState>([{ id: 'date', desc: true }])
 
   const catMap = useMemo(() => {
-    const map = new Map<number, Category>()
+    const map = new Map<string, Category>()
     for (const c of categories) map.set(c.id!, c)
     return map
   }, [categories])
@@ -198,7 +198,7 @@ export function TransactionTable({ transactions, categories, currencyMap, onSele
         header: 'Category',
         meta: { category: true },
         cell: (info) => {
-          const catId = info.getValue<number | undefined>()
+          const catId = info.getValue<string | undefined>()
           const cat = catId ? catMap.get(catId) : undefined
           if (!onCategoryChange) {
             if (!cat) return <span className="text-gray-400">-</span>

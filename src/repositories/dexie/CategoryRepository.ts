@@ -7,23 +7,27 @@ export class DexieCategoryRepository implements ICategoryRepository {
     return db.categories.orderBy('sortOrder').filter(c => !c._deleted).toArray()
   }
 
-  async getById(id: number): Promise<Category | undefined> {
+  async getById(id: string): Promise<Category | undefined> {
     return db.categories.get(id)
   }
 
-  async add(item: Omit<Category, 'id'>): Promise<number> {
-    return db.categories.add(item as Category)
+  async add(item: Omit<Category, 'id'>): Promise<string> {
+    const id = crypto.randomUUID()
+    await db.categories.add({ ...item, id } as Category)
+    return id
   }
 
-  async bulkAdd(items: Omit<Category, 'id'>[]): Promise<number[]> {
-    return db.categories.bulkAdd(items as Category[], { allKeys: true })
+  async bulkAdd(items: Omit<Category, 'id'>[]): Promise<string[]> {
+    const withIds = items.map(item => ({ ...item, id: crypto.randomUUID() })) as Category[]
+    await db.categories.bulkAdd(withIds)
+    return withIds.map(item => item.id!)
   }
 
-  async update(id: number, changes: Partial<Category>): Promise<void> {
+  async update(id: string, changes: Partial<Category>): Promise<void> {
     await db.categories.update(id, changes)
   }
 
-  async delete(id: number): Promise<void> {
+  async delete(id: string): Promise<void> {
     await db.categories.update(id, { _deleted: true })
   }
 
@@ -32,22 +36,11 @@ export class DexieCategoryRepository implements ICategoryRepository {
   }
 
   async getTopLevel(): Promise<Category[]> {
-    return db.categories.where('parentId').equals(0).or('parentId').equals('').toArray()
-      .then(results => {
-        // Also get items where parentId is null (stored as 0 in IndexedDB)
-        return db.categories.filter(c => c.parentId === null && !c._deleted).toArray()
-          .then(nullParents => {
-            const ids = new Set(results.map(r => r.id))
-            const combined = [...results].filter(c => !c._deleted)
-            for (const item of nullParents) {
-              if (!ids.has(item.id)) combined.push(item)
-            }
-            return combined.sort((a, b) => a.sortOrder - b.sortOrder)
-          })
-      })
+    return db.categories.filter(c => c.parentId === null && !c._deleted).toArray()
+      .then(results => results.sort((a, b) => a.sortOrder - b.sortOrder))
   }
 
-  async getChildren(parentId: number): Promise<Category[]> {
+  async getChildren(parentId: string): Promise<Category[]> {
     return db.categories.where('parentId').equals(parentId).filter(c => !c._deleted).sortBy('sortOrder')
   }
 

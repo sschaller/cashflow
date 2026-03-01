@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 
 interface TransactionStoreState {
-  selectedTransactionId: number | null
-  setSelectedTransactionId: (id: number | null) => void
+  selectedTransactionId: string | null
+  setSelectedTransactionId: (id: string | null) => void
 }
 
 export const useTransactionStore = create<TransactionStoreState>((set) => ({

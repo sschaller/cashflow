@@ -9,9 +9,9 @@ export function useCategories(): Category[] {
   return categories ?? []
 }
 
-export function useCategoryMap(): Map<number, Category> {
+export function useCategoryMap(): Map<string, Category> {
   const categories = useCategories()
-  const map = new Map<number, Category>()
+  const map = new Map<string, Category>()
   for (const c of categories) {
     map.set(c.id!, c)
   }

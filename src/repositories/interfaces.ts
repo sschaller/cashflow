@@ -2,17 +2,17 @@ import type { Account, Transaction, Category, Rule, ImportProfile } from '@/type
 
 export interface IRepository<T> {
   getAll(): Promise<T[]>
-  getById(id: number): Promise<T | undefined>
-  add(item: Omit<T, 'id'>): Promise<number>
-  bulkAdd(items: Omit<T, 'id'>[]): Promise<number[]>
-  update(id: number, changes: Partial<T>): Promise<void>
-  delete(id: number): Promise<void>
+  getById(id: string): Promise<T | undefined>
+  add(item: Omit<T, 'id'>): Promise<string>
+  bulkAdd(items: Omit<T, 'id'>[]): Promise<string[]>
+  update(id: string, changes: Partial<T>): Promise<void>
+  delete(id: string): Promise<void>
   count(): Promise<number>
 }
 
 export interface ITransactionRepository extends IRepository<Transaction> {
-  getByAccountId(accountId: number): Promise<Transaction[]>
-  getByCategoryId(categoryId: number): Promise<Transaction[]>
+  getByAccountId(accountId: string): Promise<Transaction[]>
+  getByCategoryId(categoryId: string): Promise<Transaction[]>
   getByDateRange(start: string, end: string): Promise<Transaction[]>
   getByHash(hash: string): Promise<Transaction | undefined>
   getFiltered(filters: TransactionFilters): Promise<Transaction[]>
@@ -20,7 +20,7 @@ export interface ITransactionRepository extends IRepository<Transaction> {
 
 export interface ICategoryRepository extends IRepository<Category> {
   getTopLevel(): Promise<Category[]>
-  getChildren(parentId: number): Promise<Category[]>
+  getChildren(parentId: string): Promise<Category[]>
   getAllWithHierarchy(): Promise<Category[]>
 }
 
@@ -30,16 +30,16 @@ export interface IAccountRepository extends IRepository<Account> {
 
 export interface IRuleRepository extends IRepository<Rule> {
   getEnabled(): Promise<Rule[]>
-  getByCategoryId(categoryId: number): Promise<Rule[]>
+  getByCategoryId(categoryId: string): Promise<Rule[]>
 }
 
 export interface IImportProfileRepository extends IRepository<ImportProfile> {
-  getByAccountId(accountId: number): Promise<ImportProfile[]>
+  getByAccountId(accountId: string): Promise<ImportProfile[]>
 }
 
 export interface TransactionFilters {
-  accountId?: number
-  categoryId?: number
+  accountId?: string
+  categoryId?: string
   type?: 'income' | 'expense' | 'transfer'
   startDate?: string
   endDate?: string

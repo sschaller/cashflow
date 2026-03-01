@@ -131,7 +131,7 @@ function HighlightedDescription({ description, conditions }: { description: stri
 export function RuleForm({ rule, categories, transactionDescription, onSave, onCancel }: RuleFormProps) {
   const [name, setName] = useState(rule?.name ?? '')
   const [conditions, setConditions] = useState<RuleCondition[]>(rule?.conditions ?? [{ ...emptyCondition }])
-  const [categoryId, setCategoryId] = useState<number | undefined>(rule?.categoryId)
+  const [categoryId, setCategoryId] = useState<string | undefined>(rule?.categoryId)
   const [displayDescription, setDisplayDescription] = useState(rule?.displayDescription ?? '')
   const [priority, setPriority] = useState(rule?.priority ?? 100)
   const [isEnabled, setIsEnabled] = useState(rule?.isEnabled ?? true)
@@ -247,7 +247,7 @@ export function RuleForm({ rule, categories, transactionDescription, onSave, onC
         <div className="space-y-3">
           <div>
             <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">Assign to Category</label>
-            <select className={`w-full ${selectClass}`} value={categoryId ?? ''} onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : undefined)}>
+            <select className={`w-full ${selectClass}`} value={categoryId ?? ''} onChange={(e) => setCategoryId(e.target.value || undefined)}>
               <option value="">No category change</option>
               {leafCategories.map((c) => (
                 <option key={c.id} value={c.id}>

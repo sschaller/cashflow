@@ -27,11 +27,11 @@ export class GoogleDriveClient {
     return { Authorization: `Bearer ${token}` }
   }
 
-  async findSyncFile(): Promise<string | null> {
+  async findSyncFile(): Promise<{ fileId: string; version: string } | null> {
     const params = new URLSearchParams({
       spaces: APP_DATA_FOLDER,
       q: `name = '${SYNC_FILENAME}'`,
-      fields: 'files(id, modifiedTime)',
+      fields: 'files(id, modifiedTime, version)',
     })
 
     const res = await fetch(`${DRIVE_API}/files?${params}`, {
@@ -40,16 +40,28 @@ export class GoogleDriveClient {
 
     if (!res.ok) throw new DriveApiError(res.status, await res.text())
     const data = await res.json()
-    return data.files?.[0]?.id ?? null
+    const file = data.files?.[0]
+    if (!file) return null
+    return { fileId: file.id, version: file.version ?? file.modifiedTime }
   }
 
-  async downloadSyncFile(fileId: string): Promise<string> {
-    const res = await fetch(`${DRIVE_API}/files/${fileId}?alt=media`, {
-      headers: await this.headers(),
-    })
+  async downloadSyncFile(fileId: string): Promise<{ content: string; version: string }> {
+    // Fetch metadata (for version) and content in parallel
+    const [metaRes, contentRes] = await Promise.all([
+      fetch(`${DRIVE_API}/files/${fileId}?fields=version,modifiedTime`, {
+        headers: await this.headers(),
+      }),
+      fetch(`${DRIVE_API}/files/${fileId}?alt=media`, {
+        headers: await this.headers(),
+      }),
+    ])
 
-    if (!res.ok) throw new DriveApiError(res.status, await res.text())
-    return res.text()
+    if (!metaRes.ok) throw new DriveApiError(metaRes.status, await metaRes.text())
+    if (!contentRes.ok) throw new DriveApiError(contentRes.status, await contentRes.text())
+
+    const meta = await metaRes.json()
+    const content = await contentRes.text()
+    return { content, version: meta.version ?? meta.modifiedTime }
   }
 
   async uploadSyncFile(content: string, existingFileId?: string): Promise<string> {

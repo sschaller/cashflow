@@ -4,12 +4,12 @@ import type { Transaction, Rule, RuleCondition } from '@/types/models.ts'
 
 function makeTx(overrides: Partial<Transaction> = {}): Transaction {
   return {
-    id: 1,
+    id: '1',
     date: '2024-01-15',
     amount: -50.00,
     description: 'WALMART SUPERCENTER #1234',
     normalizedDescription: 'walmart supercenter #1234',
-    accountId: 1,
+    accountId: '1',
     type: 'expense',
     tags: [],
     notes: '',
@@ -22,10 +22,10 @@ function makeTx(overrides: Partial<Transaction> = {}): Transaction {
 
 function makeRule(overrides: Partial<Rule> = {}): Rule {
   return {
-    id: 1,
+    id: '1',
     name: 'Test Rule',
     conditions: [{ field: 'description', operator: 'contains', value: 'walmart' }],
-    categoryId: 3,
+    categoryId: '3',
     priority: 10,
     isEnabled: true,
     ...overrides,

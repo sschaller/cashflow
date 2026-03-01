@@ -25,7 +25,7 @@ export function RuleTestPanel() {
       amount: parseFloat(amount) || 0,
       description,
       normalizedDescription: description.toLowerCase().trim(),
-      accountId: 1,
+      accountId: 'test',
       type: parseFloat(amount) >= 0 ? 'income' : 'expense',
       tags: [],
       notes: '',

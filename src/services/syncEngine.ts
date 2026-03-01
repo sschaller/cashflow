@@ -1,4 +1,4 @@
-import { db } from '@/db/index.ts'
+import { db, setSyncApplying } from '@/db/index.ts'
 import type { Transaction } from '@/types/models.ts'
 import type { SyncSnapshot } from '@/types/sync.ts'
 import type { EncryptedPayload } from '@/services/crypto.ts'
@@ -21,6 +21,7 @@ export async function createSnapshot(syncVersion: number): Promise<SyncSnapshot>
     version: 1,
     syncVersion,
     timestamp: new Date().toISOString(),
+    idFormat: 'uuid',
     accounts,
     transactions,
     categories,
@@ -29,16 +30,90 @@ export async function createSnapshot(syncVersion: number): Promise<SyncSnapshot>
   }
 }
 
+// --- Numeric-to-UUID remapping for cross-device migration ---
+
+function remapNumericSnapshot(snapshot: SyncSnapshot): SyncSnapshot {
+  if (snapshot.idFormat === 'uuid') return snapshot
+
+  const idMaps = {
+    accounts: new Map<number, string>(),
+    categories: new Map<number, string>(),
+    rules: new Map<number, string>(),
+    importProfiles: new Map<number, string>(),
+    transactions: new Map<number, string>(),
+  }
+
+  // Generate UUIDs for all numeric IDs
+  for (const rec of snapshot.accounts) {
+    if (typeof rec.id === 'number') idMaps.accounts.set(rec.id, crypto.randomUUID())
+  }
+  for (const rec of snapshot.categories) {
+    if (typeof rec.id === 'number') idMaps.categories.set(rec.id as unknown as number, crypto.randomUUID())
+  }
+  for (const rec of snapshot.rules) {
+    if (typeof rec.id === 'number') idMaps.rules.set(rec.id as unknown as number, crypto.randomUUID())
+  }
+  for (const rec of snapshot.importProfiles) {
+    if (typeof rec.id === 'number') idMaps.importProfiles.set(rec.id as unknown as number, crypto.randomUUID())
+  }
+  for (const rec of snapshot.transactions) {
+    if (typeof rec.id === 'number') idMaps.transactions.set(rec.id as unknown as number, crypto.randomUUID())
+  }
+
+  return {
+    ...snapshot,
+    idFormat: 'uuid',
+    accounts: snapshot.accounts.map(rec => ({
+      ...rec,
+      id: (typeof rec.id === 'number' ? idMaps.accounts.get(rec.id) : rec.id) as string,
+    })),
+    categories: snapshot.categories.map(rec => ({
+      ...rec,
+      id: (typeof rec.id === 'number' ? idMaps.categories.get(rec.id as unknown as number) : rec.id) as string,
+      parentId: rec.parentId != null && typeof rec.parentId === 'number'
+        ? (idMaps.categories.get(rec.parentId as unknown as number) ?? null)
+        : rec.parentId,
+    })),
+    rules: snapshot.rules.map(rec => ({
+      ...rec,
+      id: (typeof rec.id === 'number' ? idMaps.rules.get(rec.id as unknown as number) : rec.id) as string,
+      categoryId: rec.categoryId != null && typeof rec.categoryId === 'number'
+        ? idMaps.categories.get(rec.categoryId as unknown as number)
+        : rec.categoryId,
+    })),
+    importProfiles: snapshot.importProfiles.map(rec => ({
+      ...rec,
+      id: (typeof rec.id === 'number' ? idMaps.importProfiles.get(rec.id as unknown as number) : rec.id) as string,
+      accountId: typeof rec.accountId === 'number'
+        ? (idMaps.accounts.get(rec.accountId as unknown as number) ?? rec.accountId)
+        : rec.accountId,
+    })),
+    transactions: snapshot.transactions.map(rec => ({
+      ...rec,
+      id: (typeof rec.id === 'number' ? idMaps.transactions.get(rec.id as unknown as number) : rec.id) as string,
+      accountId: typeof rec.accountId === 'number'
+        ? (idMaps.accounts.get(rec.accountId as unknown as number) ?? rec.accountId)
+        : rec.accountId,
+      categoryId: rec.categoryId != null && typeof rec.categoryId === 'number'
+        ? idMaps.categories.get(rec.categoryId as unknown as number)
+        : rec.categoryId,
+      importProfileId: rec.importProfileId != null && typeof rec.importProfileId === 'number'
+        ? idMaps.importProfiles.get(rec.importProfileId as unknown as number)
+        : rec.importProfileId,
+    })),
+  }
+}
+
 // --- Merge logic ---
 
 interface Mergeable {
-  id?: number
+  id?: string
   updatedAt?: string
   _deleted?: boolean
 }
 
 function mergeTable<T extends Mergeable>(local: T[], remote: T[]): T[] {
-  const merged = new Map<number, T>()
+  const merged = new Map<string, T>()
 
   for (const rec of local) {
     if (rec.id != null) merged.set(rec.id, rec)
@@ -59,7 +134,7 @@ function mergeTable<T extends Mergeable>(local: T[], remote: T[]): T[] {
 }
 
 function mergeTransactions(local: Transaction[], remote: Transaction[]): Transaction[] {
-  const byId = new Map<number, Transaction>()
+  const byId = new Map<string, Transaction>()
   const seenHashes = new Set<string>()
 
   for (const t of local) {
@@ -96,6 +171,7 @@ export function mergeSnapshots(local: SyncSnapshot, remote: SyncSnapshot): SyncS
     version: 1,
     syncVersion: Math.max(local.syncVersion, remote.syncVersion) + 1,
     timestamp: new Date().toISOString(),
+    idFormat: 'uuid',
     accounts: mergeTable(local.accounts, remote.accounts),
     transactions: mergeTransactions(local.transactions, remote.transactions),
     categories: mergeTable(local.categories, remote.categories),
@@ -104,29 +180,80 @@ export function mergeSnapshots(local: SyncSnapshot, remote: SyncSnapshot): SyncS
   }
 }
 
-// --- Apply snapshot to local DB ---
+// --- Phase 2: Race-safe apply ---
 
-export async function applySnapshot(snapshot: SyncSnapshot): Promise<void> {
-  await db.transaction(
-    'rw',
-    [db.accounts, db.transactions, db.categories, db.rules, db.importProfiles],
-    async () => {
-      await db.accounts.clear()
-      await db.transactions.clear()
-      await db.categories.clear()
-      await db.rules.clear()
-      await db.importProfiles.clear()
-
-      if (snapshot.accounts.length) await db.accounts.bulkPut(snapshot.accounts)
-      if (snapshot.transactions.length) await db.transactions.bulkPut(snapshot.transactions)
-      if (snapshot.categories.length) await db.categories.bulkPut(snapshot.categories)
-      if (snapshot.rules.length) await db.rules.bulkPut(snapshot.rules)
-      if (snapshot.importProfiles.length) await db.importProfiles.bulkPut(snapshot.importProfiles)
-    },
-  )
+interface HasUpdatedAt {
+  id?: string
+  updatedAt?: string
 }
 
-// --- Orchestrated sync ---
+async function applyTableSafe<T extends HasUpdatedAt>(
+  table: { toArray(): Promise<T[]>; bulkPut(items: T[]): Promise<unknown>; bulkDelete(keys: string[]): Promise<void> },
+  mergedRecords: T[],
+  snapshotTimestamp: string,
+): Promise<void> {
+  const currentRecords = await table.toArray()
+  const currentById = new Map<string, T>()
+  for (const rec of currentRecords) {
+    if (rec.id != null) currentById.set(rec.id, rec)
+  }
+
+  const mergedById = new Map<string, T>()
+  for (const rec of mergedRecords) {
+    if (rec.id != null) mergedById.set(rec.id, rec)
+  }
+
+  const toPut: T[] = []
+  const toDelete: string[] = []
+
+  // Process merged records: put unless current record was modified during sync
+  for (const [id, mergedRec] of mergedById) {
+    const current = currentById.get(id)
+    if (current && (current.updatedAt ?? '') > snapshotTimestamp) {
+      // Modified during sync window — keep the local version
+      continue
+    }
+    toPut.push(mergedRec)
+  }
+
+  // Process current records not in merged set
+  for (const [id, current] of currentById) {
+    if (!mergedById.has(id)) {
+      if ((current.updatedAt ?? '') > snapshotTimestamp) {
+        // Created during sync window — keep it
+        continue
+      }
+      // Remote deletion or not in merged set
+      toDelete.push(id)
+    }
+  }
+
+  if (toPut.length) await table.bulkPut(toPut)
+  if (toDelete.length) await table.bulkDelete(toDelete)
+}
+
+export async function applySnapshot(snapshot: SyncSnapshot, snapshotTimestamp: string): Promise<void> {
+  setSyncApplying(true)
+  try {
+    await db.transaction(
+      'rw',
+      [db.accounts, db.transactions, db.categories, db.rules, db.importProfiles],
+      async () => {
+        await applyTableSafe(db.accounts, snapshot.accounts, snapshotTimestamp)
+        await applyTableSafe(db.transactions, snapshot.transactions, snapshotTimestamp)
+        await applyTableSafe(db.categories, snapshot.categories, snapshotTimestamp)
+        await applyTableSafe(db.rules, snapshot.rules, snapshotTimestamp)
+        await applyTableSafe(db.importProfiles, snapshot.importProfiles, snapshotTimestamp)
+      },
+    )
+  } finally {
+    setSyncApplying(false)
+  }
+}
+
+// --- Orchestrated sync with ETag retry (Phase 3) ---
+
+const MAX_SYNC_RETRIES = 3
 
 export async function performSync(
   drive: GoogleDriveClient,
@@ -134,38 +261,60 @@ export async function performSync(
   salt: Uint8Array,
   currentSyncVersion: number,
 ): Promise<{ newSyncVersion: number }> {
-  // 1. Create local snapshot
-  const localSnapshot = await createSnapshot(currentSyncVersion)
+  for (let attempt = 0; attempt < MAX_SYNC_RETRIES; attempt++) {
+    // 1. Capture timestamp before reading local state
+    const snapshotTimestamp = new Date().toISOString()
 
-  // 2. Try to download remote snapshot
-  const fileId = await drive.findSyncFile()
-  let merged: SyncSnapshot
+    // 2. Create local snapshot
+    const localSnapshot = await createSnapshot(currentSyncVersion)
 
-  if (fileId) {
-    const encryptedText = await drive.downloadSyncFile(fileId)
-    const encryptedPayload: EncryptedPayload = JSON.parse(encryptedText)
-    const remoteJson = await decrypt(
-      fromBase64(encryptedPayload.data).buffer as ArrayBuffer,
-      cryptoKey,
-      fromBase64(encryptedPayload.iv),
-    )
-    const remoteSnapshot: SyncSnapshot = JSON.parse(remoteJson)
-    merged = mergeSnapshots(localSnapshot, remoteSnapshot)
-  } else {
-    merged = { ...localSnapshot, syncVersion: 1 }
+    // 3. Try to download remote snapshot
+    const remoteFile = await drive.findSyncFile()
+    let merged: SyncSnapshot
+    let downloadedVersion: string | null = null
+
+    if (remoteFile) {
+      downloadedVersion = remoteFile.version
+      const { content } = await drive.downloadSyncFile(remoteFile.fileId)
+      const encryptedPayload: EncryptedPayload = JSON.parse(content)
+      const remoteJson = await decrypt(
+        fromBase64(encryptedPayload.data).buffer as ArrayBuffer,
+        cryptoKey,
+        fromBase64(encryptedPayload.iv),
+      )
+      let remoteSnapshot: SyncSnapshot = JSON.parse(remoteJson)
+
+      // Cross-device migration: remap numeric IDs to UUIDs if needed
+      remoteSnapshot = remapNumericSnapshot(remoteSnapshot)
+
+      merged = mergeSnapshots(localSnapshot, remoteSnapshot)
+    } else {
+      merged = { ...localSnapshot, syncVersion: 1, idFormat: 'uuid' }
+    }
+
+    // 4. Apply merged snapshot locally (race-safe)
+    await applySnapshot(merged, snapshotTimestamp)
+
+    // 5. ETag check: verify remote hasn't changed since download
+    if (remoteFile && downloadedVersion) {
+      const currentRemote = await drive.findSyncFile()
+      if (currentRemote && currentRemote.version !== downloadedVersion) {
+        // Remote changed during our sync — retry from scratch
+        continue
+      }
+    }
+
+    // 6. Encrypt and upload merged snapshot
+    const { iv, ciphertext } = await encrypt(JSON.stringify(merged), cryptoKey)
+    const payload: EncryptedPayload = {
+      salt: toBase64(salt),
+      iv: toBase64(iv),
+      data: toBase64(new Uint8Array(ciphertext)),
+    }
+    await drive.uploadSyncFile(JSON.stringify(payload), remoteFile?.fileId ?? undefined)
+
+    return { newSyncVersion: merged.syncVersion }
   }
 
-  // 3. Apply merged snapshot locally
-  await applySnapshot(merged)
-
-  // 4. Encrypt and upload merged snapshot
-  const { iv, ciphertext } = await encrypt(JSON.stringify(merged), cryptoKey)
-  const payload: EncryptedPayload = {
-    salt: toBase64(salt),
-    iv: toBase64(iv),
-    data: toBase64(new Uint8Array(ciphertext)),
-  }
-  await drive.uploadSyncFile(JSON.stringify(payload), fileId ?? undefined)
-
-  return { newSyncVersion: merged.syncVersion }
+  throw new Error('Sync failed after maximum retries due to concurrent modifications')
 }

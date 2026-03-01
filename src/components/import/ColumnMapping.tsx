@@ -13,8 +13,8 @@ interface ColumnMappingStepProps {
   amountConfig: AmountConfig
   onAmountConfigChange: (config: AmountConfig) => void
   accounts: Account[]
-  selectedAccountId: number | null
-  onAccountChange: (id: number | null) => void
+  selectedAccountId: string | null
+  onAccountChange: (id: string | null) => void
   onCreateAccount: (name: string) => Promise<void>
 }
 
@@ -53,7 +53,7 @@ export function ColumnMappingStep({
           <select
             className={selectClass}
             value={selectedAccountId ?? ''}
-            onChange={(e) => onAccountChange(e.target.value ? Number(e.target.value) : null)}
+            onChange={(e) => onAccountChange(e.target.value || null)}
           >
             <option value="">Select account...</option>
             {accounts.map((a) => (

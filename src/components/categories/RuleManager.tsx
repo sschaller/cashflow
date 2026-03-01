@@ -22,7 +22,7 @@ export function RuleManager() {
 
   useEffect(() => { load() }, [repos])
 
-  const getCategoryName = (id: number) => categories.find((c) => c.id === id)?.name ?? 'Unknown'
+  const getCategoryName = (id: string) => categories.find((c) => c.id === id)?.name ?? 'Unknown'
 
   const handleSave = async (data: Omit<Rule, 'id'>) => {
     if (editingRule?.id) {
@@ -41,7 +41,7 @@ export function RuleManager() {
     load()
   }
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     await repos.rules.delete(id)
     toast.success('Rule deleted')
     load()

@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 
 interface AccountStoreState {
-  selectedAccountId: number | null
-  setSelectedAccountId: (id: number | null) => void
+  selectedAccountId: string | null
+  setSelectedAccountId: (id: string | null) => void
 }
 
 export const useAccountStore = create<AccountStoreState>((set) => ({
